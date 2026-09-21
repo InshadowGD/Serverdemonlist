@@ -1,87 +1,163 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8"><title>Server Demon List</title>
+    <meta charset="UTF-8">
+    <title>Server Demonlist</title>
     <style>
-        body { background:#111; color:#fff; font-family:Arial; margin:0; padding:20px; }
-        header { text-align:center; border-bottom:2px solid #333; padding-bottom:20px; }
-        .container { display:flex; max-width:1200px; margin:20px auto; gap:20px; }
-        .list-box { flex:1; background:#222; padding:15px; border-radius:8px; max-height:500px; overflow-y:auto; }
-        .info-box { flex:2; background:#1a1a1a; padding:15px; border-radius:8px; border:1px solid #333; }
-        .admin-box { max-width:1200px; margin:20px auto; background:#222; padding:20px; border-radius:8px; border:1px solid #ff0055; }
-        .form-group { margin-bottom:10px; }
-        .form-group label { display:block; margin-bottom:5px; font-size:14px; }
-        .form-group input { width:100%; padding:8px; background:#333; border:1px solid #444; color:#fff; border-radius:4px; box-sizing:border-box; }
-        .admin-btn { background:#ff0055; color:#fff; border:none; padding:10px 20px; border-radius:4px; cursor:pointer; font-weight:bold; }
-        .demon-item { padding:10px; margin:5px 0; background:#2a2a2a; cursor:pointer; border-radius:4px; }
-        .demon-item.active { background:#4a4a4a; border-left:4px solid #00f0ff; }
-        .preview-img { width:100%; max-width:360px; border-radius:6px; margin:10px 0; border:1px solid #444; }
-        .victor-item { display:flex; justify-content:space-between; background:#2a2a2a; padding:8px; margin:5px 0; border-radius:4px; align-items:center; }
+        body { background: #121316; color: #fff; font-family: Arial; margin: 40px; }
+        .container { display: flex; gap: 30px; }
+        .main-content { flex: 2; background: #17181c; padding: 20px; border-radius: 8px; }
+        .sidebar { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+        .panel { background: #1c1d22; padding: 20px; border-radius: 8px; }
+        .demon-card-wrapper { background: #1c1d22; margin: 10px 0; padding: 15px; border-radius: 6px; border-left: 5px solid #ff4a4a; cursor: pointer; }
+        .demon-card-wrapper.active { border-left-color: #00ff66; background: #1e2922; }
+        .form-group { margin-bottom: 12px; }
+        input { width: 100%; padding: 8px; margin-top: 4px; background: #121316; border: 1px solid #2d3039; color: #fff; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; font-weight: bold; cursor: pointer; margin-top: 8px; }
+        .victors-list { margin-top: 10px; padding-top: 10px; border-top: 1px solid #2d3039; font-size: 14px; }
+        .victor-item { display: flex; justify-content: space-between; margin: 4px 0; }
     </style>
 </head>
 <body>
-    <header><h1>SERVER DEMON LIST</h1><p>Топ уровней пройденных на сервере</p></header>
+
     <div class="container">
-        <div class="list-box"><h3>Список уровней</h3><div id="demons-list"></div></div>
-        <div class="info-box" id="info-box"><h3>Информация</h3><p>Выберите демон из списка.</p></div>
+        <!-- СПИСОК ДЕМОНОВ -->
+        <div class="main-content">
+            <h1>Server Demonlist</h1>
+            <div id="demons-list">Загрузка списка...</div>
+        </div>
+
+        <!-- ПАНЕЛИ УПРАВЛЕНИЯ -->
+        <div class="sidebar">
+            <div class="panel">
+                <h2 id="form-title">Добавить уровень</h2>
+                <div class="form-group"><label>Позиция</label><input type="number" id="form-position"></div>
+                <div class="form-group"><label>Название</label><input type="text" id="form-name"></div>
+                <div class="form-group"><label>Создатель</label><input type="text" id="form-creator"></div>
+                <div class="form-group"><label>Верификатор</label><input type="text" id="form-verifier"></div>
+                <button onclick="saveDemonChanges()" style="background:#ff4a4a; color:#fff;">Сохранить уровень</button>
+                <button onclick="createNewDemonFields()">Очистить форму</button>
+                <button id="btn-delete-demon" onclick="deleteDemon()" style="background:#cc2424; color:#fff; display:none;">Удалить этот уровень</button>
+            </div>
+
+            <div class="panel" id="victor-panel" style="display: none;">
+                <h2>Добавить рекорд</h2>
+                <div class="form-group"><label>Игрок (Виктор)</label><input type="text" id="victor-name"></div>
+                <div class="form-group"><label>Видео (YouTube)</label><input type="url" id="victor-video"></div>
+                <button onclick="addVictor()" style="background:#00ff66;">Записать рекорд</button>
+            </div>
+        </div>
     </div>
-    <div class="admin-box">
-        <h3 style="color:#ff0055;margin-top:0">Панель администратора</h3>
-        <div class="form-group"><label>Позиция в топе:</label><input type="number" id="form-position"></div>
-        <div class="form-group"><label>Название уровня:</label><input type="text" id="form-name"></div>
-        <div class="form-group"><label>Создатель:</label><input type="text" id="form-creator"></div>
-        <div class="form-group"><label>Верификатор:</label><input type="text" id="form-verifier"></div>
-        <div class="form-group"><label>Ссылка на YouTube:</label><input type="text" id="form-video"></div>
-        <button class="admin-btn" onclick="saveDemonChanges()">Сохранить уровень</button>
-        <button class="admin-btn" onclick="createNewDemonFields()" style="background:#444;margin-left:10px">Добавить новый уровень</button>
-        <button class="admin-btn" onclick="deleteDemon()" style="background:#888;margin-left:10px">Удалить уровень</button>
-        <hr style="border-color:#333;margin:20px 0">
-        <h4 style="color:#00f0ff">Добавить виктора:</h4>
-        <div class="form-group"><label>Никнейм игрока:</label><input type="text" id="victor-name"></div>
-        <div class="form-group"><label>Ссылка на YouTube игрока:</label><input type="text" id="victor-video"></div>
-        <button class="admin-btn" onclick="addVictor()" style="background:#00f0ff;color:#000">Добавить виктора</button>
-    </div>
+
     <script>
+        const API_URL = 'http://localhost:3000'; 
         let selectedPos = null;
-        const API_URL = window.location.origin;
-        function getYTId(url){ if(!url)return null; const m=url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/); return (m&&m.length===11)?m:null; }
-        function updateInfoBox(d){
-            const id=getYTId(d.video); const img=id?`<img class="preview-img" src="https://youtube.com{id}/mqdefault.jpg">`:'';
-            let vHtml='<h4 style="color:#00f0ff">Викторы:</h4>';
-            if(d.victors&&d.victors.length>0){
-                d.victors.forEach(v=>{ vHtml+=`<div class="victor-item"><span>🏆 <a href="${v.video}" target="_blank" style="color:#fff;text-decoration:none;font-weight:bold">${v.name}</a></span><button onclick="deleteVictor('${v.name}')" style="background:#ff0055;border:none;color:#fff;border-radius:4px;padding:4px 8px;cursor:pointer">Удалить</button></div>`; });
-            } else { vHtml+='<p style="color:#aaa;font-size:14px">Рекордов нет.</p>'; }
-            document.getElementById('info-box').innerHTML=`<h2>#${d.position} - ${d.name}</h2>${img}<p><strong>Создатель:</strong> ${d.creator}</p><p><strong>Верификатор:</strong> ${d.verifier}</p><p><strong>Видео:</strong> <a href="${d.video}" target="_blank" style="color:#00f0ff">YouTube ↗</a></p><hr style="border-color:#333">${vHtml}`;
-            document.getElementById('form-position').value=d.position; document.getElementById('form-name').value=d.name; document.getElementById('form-creator').value=d.creator; document.getElementById('form-verifier').value=d.verifier; document.getElementById('form-video').value=d.video;
-        }
-        async function loadDemons(){
-            try{
-                const r=await fetch(`${API_URL}/api/demons`); const list=await r.json(); const div=document.getElementById('demons-list'); div.innerHTML='';
-                list.forEach(d=>{
-                    const item=document.createElement('div'); item.className='demon-item'+(selectedPos===d.position?' active':''); item.innerText=`#${d.position} - ${d.name}`;
-                    item.onclick=()=>{ selectedPos=d.position; document.querySelectorAll('.demon-item').forEach(el=>el.classList.remove('active')); item.classList.add('active'); updateInfoBox(d); };
-                    div.appendChild(item); if(selectedPos===d.position) updateInfoBox(d);
+
+        window.onload = function() { loadDemons(); };
+
+        async function loadDemons() {
+            const list = document.getElementById('demons-list');
+            try {
+                const response = await fetch(`${API_URL}/api/demons`);
+                const data = await response.json();
+                list.innerHTML = ''; 
+                if (data.length === 0) { list.innerHTML = 'Лист пуст.'; return; }
+                
+                data.sort((a, b) => a.position - b.position);
+                data.forEach(d => {
+                    const isSelected = selectedPos === parseInt(d.position);
+                    const wrapper = document.createElement('div');
+                    wrapper.className = `demon-card-wrapper ${isSelected ? 'active' : ''}`;
+                    
+                    let html = `
+                        <div onclick='selectDemon(${JSON.stringify(d)})'>
+                            <h3>#${d.position} - ${d.name}</h3>
+                            <p style="color:#8a8d98; margin:0;">Создатель: ${d.creator} | Верификатор: ${d.verifier || 'Не указан'}</p>
+                        </div>
+                    `;
+
+                    if (d.victors && d.victors.length > 0) {
+                        html += `<div class="victors-list"><strong>Победители:</strong>`;
+                        d.victors.forEach(v => {
+                            html += `<div class="victor-item"><span>👤 ${v.name}</span><a href="${v.video}" target="_blank" style="color:#4af3ff;">🎬 Видео</a></div>`;
+                        });
+                        html += `</div>`;
+                    }
+                    wrapper.innerHTML = html;
+                    list.appendChild(wrapper);
                 });
-            }catch(e){ document.getElementById('demons-list').innerText="Ошибка сервера."; }
+            } catch (e) {
+                list.innerHTML = 'Нет связи с сервером.';
+            }
         }
-        function createNewDemonFields(){ selectedPos=null; document.querySelectorAll('.demon-item').forEach(el=>el.classList.remove('active')); document.getElementById('form-position').value=''; document.getElementById('form-name').value=''; document.getElementById('form-creator').value=''; document.getElementById('form-verifier').value=''; document.getElementById('form-video').value=''; alert("Форма очищена!"); }
-        async function saveDemonChanges(){
-            const newPos=document.getElementById('form-position').value;
-            const body={ position:newPos, name:document.getElementById('form-name').value, creator:document.getElementById('form-creator').value, verifier:document.getElementById('form-verifier').value, video:document.getElementById('form-video').value };
-            if(!body.position||!body.name){ alert("Заполните поля!"); return; }
-            try{
-                if(selectedPos!==null&&selectedPos!==parseInt(newPos)){ await fetch(`${API_URL}/api/demons/delete/${selectedPos}`,{method:'DELETE'}); }
-                await fetch(`${API_URL}/api/demons/update`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-                alert("Уровень сохранен!"); selectedPos=parseInt(body.position); loadDemons();
-            }catch(e){ alert("Ошибка сохранения"); }
+
+        function selectDemon(demon) {
+            selectedPos = parseInt(demon.position);
+            document.getElementById('form-title').innerText = "Редактировать уровень";
+            document.getElementById('form-position').value = demon.position;
+            document.getElementById('form-name').value = demon.name;
+            document.getElementById('form-creator').value = demon.creator;
+            document.getElementById('form-verifier').value = demon.verifier || '';
+            document.getElementById('btn-delete-demon').style.display = 'block';
+            document.getElementById('victor-panel').style.display = 'block';
+            loadDemons();
         }
-        async function deleteDemon(){ if(!selectedPos||!confirm("Удалить уровень?"))return; try{ await fetch(`${API_URL}/api/demons/delete/${selectedPos}`,{method:'DELETE'}); selectedPos=null; alert("Удалено!"); loadDemons(); document.getElementById('info-box').innerHTML='<h3>Информация</h3><p>Выберите уровень.</p>'; }catch(e){ alert("Ошибка"); } }
-        async function addVictor(){
-            const name=document.getElementById('victor-name').value; const video=document.getElementById('victor-video').value; if(!selectedPos){ alert("Выберите уровень!"); return; } if(!name||!video){ alert("Заполните ник и ссылку!"); return; }
-            try{ await fetch(`${API_URL}/api/demons/${selectedPos}/victor`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name,video}) }); alert("Игрок добавлен!"); document.getElementById('victor-name').value=''; document.getElementById('victor-video').value=''; loadDemons(); }catch(e){ alert("Ошибка"); }
+
+        function createNewDemonFields() {
+            selectedPos = null;
+            document.getElementById('form-title').innerText = "Добавить уровень";
+            document.getElementById('form-position').value = '';
+            document.getElementById('form-name').value = '';
+            document.getElementById('form-creator').value = '';
+            document.getElementById('form-verifier').value = '';
+            document.getElementById('btn-delete-demon').style.display = 'none';
+            document.getElementById('victor-panel').style.display = 'none';
+            loadDemons();
         }
-        async function deleteVictor(name){ if(!confirm(`Удалить ${name}?`))return; try{ await fetch(`${API_URL}/api/demons/${selectedPos}/victor/delete`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name}) }); alert("Удален!"); loadDemons(); }catch(e){ alert("Ошибка"); } }
-        loadDemons();
+
+        async function saveDemonChanges() {
+            const position = document.getElementById('form-position').value;
+            const name = document.getElementById('form-name').value;
+            const creator = document.getElementById('form-creator').value;
+            const verifier = document.getElementById('form-verifier').value;
+            if (!position || !name || !creator || !verifier) { alert("Заполните все поля!"); return; }
+
+            const body = { position: parseInt(position), name, creator, verifier };
+            try {
+                if (selectedPos !== null && selectedPos !== body.position) {
+                    await fetch(`${API_URL}/api/demons/delete/${selectedPos}`, { method: 'POST' });
+                }
+                const url = selectedPos !== null ? `${API_URL}/api/demons/update` : `${API_URL}/api/demons/add`;
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (res.ok) { alert("Уровень сохранен!"); selectedPos = body.position; loadDemons(); }
+            } catch (e) { alert("Ошибка."); }
+        }
+
+        async function deleteDemon() {
+            if (selectedPos === null || !confirm("Удалить уровень?")) return;
+            try {
+                const res = await fetch(`${API_URL}/api/demons/delete/${selectedPos}`, { method: 'POST' });
+                if (res.ok) { alert("Удалено!"); createNewDemonFields(); }
+            } catch (e) { alert("Ошибка."); }
+        }
+
+        async function addVictor() {
+            const nInput = document.getElementById('victor-name');
+            const vInput = document.getElementById('victor-video');
+            if (!nInput.value || !vInput.value || selectedPos === null) { alert("Заполните поля рекорда!"); return; }
+            try {
+                const res = await fetch(`${API_URL}/api/demons/${selectedPos}/victor`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: nInput.value, video: vInput.value })
+                });
+                if (res.ok) { alert("Рекорд записан!"); nInput.value = ''; vInput.value = ''; loadDemons(); }
+            } catch (e) { console.error(e); }
+        }
     </script>
 </body>
 </html>
