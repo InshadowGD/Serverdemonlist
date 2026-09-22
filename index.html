@@ -110,9 +110,9 @@
                 const response = await fetch('/api/demons');
                 const data = await response.json();
                 
-                if (data.length === 0) { 
+                if (!data || data.length === 0) { 
                     list.innerHTML = 'Лист пуст.'; 
-                    document.getElementById('leaderboard-content').innerHTML = 'Нет рекордов.';
+                    document.getElementById('leaderboard-content').innerHTML = 'Пока нет записанных рекордов.';
                     return; 
                 }
                 
@@ -235,13 +235,13 @@
                     headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
                     body: JSON.stringify(body)
                 });
-                if (res.ok) { alert("Уровень сохранен в глобальное облако!"); createNewDemonFields(); }
+                if (res.ok) { alert("Сохранено!"); createNewDemonFields(); }
             } catch (e) { alert("Ошибка сохранения."); }
         }
 
         async function deleteDemon() {
             if (!checkAdmin()) return;
-            if (selectedId === null || !confirm("Вы уверены, что хотите НАВСЕГДА удалить уровень?")) return;
+            if (selectedId === null || !confirm("Вы уверены?")) return;
             const adminCode = document.getElementById('form-admin-code').value;
             try {
                 const res = await fetch('/api/demons/delete', { 
@@ -249,7 +249,7 @@
                     headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
                     body: JSON.stringify({ id: selectedId })
                 });
-                if (res.ok) { alert("Уровень удален для всех!"); createNewDemonFields(); }
+                if (res.ok) { alert("Удалено!"); createNewDemonFields(); }
             } catch (e) { alert("Ошибка удаления."); }
         }
 
@@ -259,7 +259,7 @@
             const nInput = document.getElementById('victor-name');
             const pInput = document.getElementById('victor-percent');
             const vInput = document.getElementById('victor-video');
-            if (!nInput.value || !pInput.value || !vInput.value || selectedId === null) { alert("Заполните все поля рекорда!"); return; }
+            if (!nInput.value || !pInput.value || !vInput.value || selectedId === null) { alert("Заполните поля!"); return; }
             
             try {
                 const res = await fetch('/api/demons/add-victor', {
@@ -267,7 +267,7 @@
                     headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
                     body: JSON.stringify({ id: selectedId, name: nInput.value, percent: parseInt(pInput.value), video: vInput.value })
                 });
-                if (res.ok) { alert("Рекорд записан для всех!"); nInput.value = ''; pInput.value = '100'; vInput.value = ''; }
+                if (res.ok) { alert("Рекорд записан!"); nInput.value = ''; pInput.value = '100'; vInput.value = ''; }
             } catch (e) { console.error(e); }
         }
     </script>

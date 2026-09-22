@@ -20,9 +20,7 @@ async function readDB() {
         if (result && result.result) {
             return typeof result.result === 'string' ? JSON.parse(result.result) : result.result;
         }
-        const startData = [{ id: "id_default", position: 1, name: "Acheron", creator: "Riot", verifier: "Riot", minPercent: 100, victors: [] }];
-        await writeDB(startData);
-        return startData;
+        return [];
     } catch (e) { return []; }
 }
 
@@ -98,7 +96,6 @@ app.post('/api/demons/delete', async (req, res) => {
     res.json({ success: true });
 });
 
-// ИСПРАВЛЕНО: Теперь рекорды четко привязываются по уникальному ID уровня!
 app.post('/api/demons/add-victor', async (req, res) => {
     if (isNotAdmin(req)) return res.status(403).json({ success: false, error: "Access Denied" });
     const { id, name, percent, video } = req.body;
