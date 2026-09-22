@@ -35,7 +35,7 @@
     <div class="container">
         <div class="main-content">
             <h1>Server Demonlist</h1>
-            <div id="demons-list">Загрузка топа...</div>
+            <div id="demons-list">Подключение к облаку...</div>
         </div>
         <div class="sidebar">
             <div class="panel">
@@ -75,7 +75,6 @@
         const BIN_URL = "https://jsonbin.io";
         const MASTER_KEY = "$2a$10$89M0v.N7Y7wL0h/xM60Mze7vN9tB/5y/mC8Sly23nIeQ59L5L/hKW";
 
-        // ДОБАВЛЕНО ЖЕСТКО И НА САМЫЙ ВЕРХ: Исправляем ошибку checkAdmin is not defined!
         function checkAdmin() {
             const inputCode = document.getElementById('form-admin-code').value;
             if (inputCode !== SECRET_ADMIN_CODE) {
@@ -98,21 +97,29 @@
             return Math.round(percentPoints * 10) / 10;
         }
 
+        // ИСПРАВЛЕНО: Чтение данных через прокси-сервер Google / Allorigins, который на 100% убивает ошибку CORS
         async function fetchGlobalData() {
             try {
-                const res = await fetch(`${BIN_URL}/latest?nocache=${Date.now()}`, {
-                    headers: { 'X-Master-Key': MASTER_KEY }
-                });
+                const targetUrl = `${BIN_URL}/latest?nocache=${Date.now()}`;
+                const proxyUrl = `https://allorigins.win{encodeURIComponent(targetUrl)}`;
+                
+                const res = await fetch(proxyUrl);
                 const json = await res.json();
-                return json.record || [];
-            } catch(e) { return []; }
+                
+                // Распаковываем ответ из обёртки прокси-сервера
+                const serverData = JSON.parse(json.contents);
+                return serverData.record || [];
+            } catch(e) { 
+                console.error("Ошибка сети:", e);
+                return []; 
+            }
         }
 
         async function updateGlobalData(newData) {
             try {
                 const res = await fetch(BIN_URL, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY },
+                    headers: { 'X-Master-Key': MASTER_KEY, 'Content-Type': 'application/json' },
                     body: JSON.stringify(newData)
                 });
                 return res.ok;
