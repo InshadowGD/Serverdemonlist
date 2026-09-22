@@ -4,92 +4,28 @@
     <meta charset="UTF-8">
     <title>Server Demonlist</title>
     <style>
-        body { 
-            background: radial-gradient(circle at top, #1a1c23 0%, #0f1015 100%); 
-            color: #f1f2f6; 
-            font-family: 'Segoe UI', Roboto, sans-serif; 
-            margin: 0;
-            padding: 40px;
-            min-height: 100vh;
-        }
+        body { background: radial-gradient(circle at top, #1a1c23 0%, #0f1015 100%); color: #f1f2f6; font-family: 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px; min-height: 100vh; }
         .container { display: flex; gap: 35px; max-width: 1400px; margin: 0 auto; align-items: flex-start; }
         .main-content { flex: 2; background: rgba(23, 24, 28, 0.6); padding: 30px; border-radius: 16px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
-        
-        .sidebar { 
-            flex: 1; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 25px; 
-            position: -webkit-sticky;
-            position: sticky;
-            top: 40px; 
-            overflow: visible; 
-        }
-
+        .sidebar { flex: 1; display: flex; flex-direction: column; gap: 25px; position: -webkit-sticky; position: sticky; top: 40px; overflow: visible; }
         .panel { background: rgba(28, 29, 34, 0.8); padding: 25px; border-radius: 16px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2); }
-        
         h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: 1px; margin-top: 0; margin-bottom: 25px; background: linear-gradient(45deg, #ff4a4a, #ffb84d); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         h2 { font-size: 1.4rem; font-weight: 700; margin-top: 0; margin-bottom: 20px; color: #fff; border-bottom: 2px solid rgba(255,255,255,0.05); padding-bottom: 10px; }
-        
-        .demon-card-wrapper { 
-            background: rgba(33, 35, 41, 0.5); 
-            margin: 15px 0; 
-            padding: 20px; 
-            border-radius: 12px; 
-            border: 1px solid rgba(255, 74, 74, 0.15);
-            border-left: 6px solid #ff4a4a; 
-            cursor: pointer; 
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-        }
-        .demon-card-wrapper:hover { 
-            transform: translateY(-4px);
-            background: rgba(40, 43, 51, 0.7);
-            border-color: rgba(255, 74, 74, 0.4);
-        }
-        .demon-card-wrapper.active { 
-            border-left-color: #00ff66; 
-            border-color: rgba(0, 255, 102, 0.3);
-            background: linear-gradient(90deg, rgba(30, 41, 34, 0.6) 0%, rgba(24, 26, 31, 0.6) 100%); 
-        }
-        
+        .demon-card-wrapper { background: rgba(33, 35, 41, 0.5); margin: 15px 0; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 74, 74, 0.15); border-left: 6px solid #ff4a4a; cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+        .demon-card-wrapper:hover { transform: translateY(-4px); background: rgba(40, 43, 51, 0.7); border-color: rgba(255, 74, 74, 0.4); }
+        .demon-card-wrapper.active { border-left-color: #00ff66; border-color: rgba(0, 255, 102, 0.3); background: linear-gradient(90deg, rgba(30, 41, 34, 0.6) 0%, rgba(24, 26, 31, 0.6) 100%); }
         .demon-card-wrapper h3 { font-size: 1.3rem; margin: 0 0 8px 0; color: #fff; font-weight: 700; }
         .demon-card-wrapper p { color: #9da2af; font-size: 0.95rem; margin: 0; }
-        
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; color: #8a8d98; margin-bottom: 6px; }
         input { width: 100%; padding: 12px; border-radius: 8px; background: #121316; border: 1px solid #2d3039; color: #fff; box-sizing: border-box; }
         input:focus { border-color: #ff4a4a; outline: none; }
-        
         button { width: 100%; padding: 12px; font-weight: bold; font-size: 0.95rem; cursor: pointer; margin-top: 10px; border: none; border-radius: 8px; transition: all 0.2s; }
-        
         .victors-list { margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.08); }
         .victors-list strong { color: #ffb84d; display: block; margin-bottom: 8px; font-size: 0.9rem; text-transform: uppercase; }
         .victor-item { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px; margin: 6px 0; }
-        
-        .video-btn { 
-            color: #4af3ff; 
-            text-decoration: none; 
-            font-weight: 700; 
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            padding: 6px 12px;
-            background: rgba(74, 243, 255, 0.05);
-            border: 1px solid rgba(74, 243, 255, 0.2);
-            border-radius: 6px;
-            transition: all 0.2s ease-in-out;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .video-btn:hover { 
-            color: #fff; 
-            background: rgba(74, 243, 255, 0.25);
-            border-color: #4af3ff;
-            box-shadow: 0 0 12px rgba(74, 243, 255, 0.4);
-            transform: scale(1.03);
-        }
-        
+        .video-btn { color: #4af3ff; text-decoration: none; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 12px; background: rgba(74, 243, 255, 0.05); border: 1px solid rgba(74, 243, 255, 0.2); border-radius: 6px; transition: all 0.2s ease-in-out; display: flex; align-items: center; gap: 6px; }
+        .video-btn:hover { color: #fff; background: rgba(74, 243, 255, 0.25); border-color: #4af3ff; box-shadow: 0 0 12px rgba(74, 243, 255, 0.4); transform: scale(1.03); }
         .leaderboard-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .leaderboard-table th { text-align: left; padding: 8px; color: #8a8d98; font-size: 0.8rem; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .leaderboard-table td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 0.95rem; }
@@ -143,14 +79,9 @@
         const SECRET_ADMIN_CODE = '090909';
         let selectedId = null;
 
-        // МАГИЯ ТУТ: Теперь сайт сам полностью обновляет данные каждую секунду (1000мс)
         window.onload = function() { 
-            if (!localStorage.getItem('local_db_v4')) {
-                const startData = [{ id: "id_1", position: 1, name: "Acheron", creator: "Riot", verifier: "Riot", minPercent: 100, victors: [] }];
-                localStorage.setItem('local_db_v4', JSON.stringify(startData));
-            }
             loadDemons(); 
-            setInterval(loadDemons, 1000); 
+            setInterval(loadDemons, 3000); 
         };
 
         function checkAdmin() {
@@ -163,10 +94,8 @@
         }
         function calculatePoints(position, percent, minPercent, totalDemons) {
             if (percent < minPercent) return 0;
-            
             let maxPoints = 250 - (position - 1) * (200 / Math.max(totalDemons, 1));
             if (maxPoints < 10) maxPoints = 10; 
-            
             if (parseInt(percent) === 100) {
                 return Math.round(maxPoints * 10) / 10;
             } else {
@@ -175,64 +104,58 @@
             }
         }
 
-        function loadDemons() {
+        async function loadDemons() {
             const list = document.getElementById('demons-list');
-            
-            const data = JSON.parse(localStorage.getItem('local_db_v4') || '[]');
-            if (data.length === 0) { 
-                list.innerHTML = 'Лист пуст.'; 
-                document.getElementById('leaderboard-content').innerHTML = 'Нет рекордов.';
-                return; 
-            }
-            
-            data.sort((a, b) => a.position - b.position);
-            let playerScores = {};
-
-            // Фиксируем, что было внутри, чтобы интерфейс не прыгал при каждой перезагрузке секундного таймера
-            let newHtml = '';
-
-            data.forEach(d => {
-                const isSelected = selectedId === d.id;
+            try {
+                const response = await fetch('/api/demons');
+                const data = await response.json();
                 
-                let posColor = '#ff4a4a';
-                if (d.position === 1) posColor = '#ffd700';
-                if (d.position === 2) posColor = '#c0c0c0';
-                if (d.position === 3) posColor = '#cd7f32';
-                
-                newHtml += `<div class="demon-card-wrapper ${isSelected ? 'active' : ''}" style="border-left-color: ${posColor}">
-                    <div onclick='selectDemon(${JSON.stringify(d)})'>
-                        <h3><span style="color: ${posColor}">#${d.position}</span> - ${d.name}</h3>
-                        <p>Создатель: <span style="color:#fff">${d.creator}</span> | Мин. процент: <span style="color:#ffb84d">${d.minPercent || 100}%</span></p>
-                    </div>
-                `;
-
-                if (d.victors && d.victors.length > 0) {
-                    newHtml += `<div class="victors-list"><strong>🏆 Рекорды:</strong>`;
-                    d.victors.forEach(v => {
-                        let pts = calculatePoints(d.position, v.percent || 100, d.minPercent || 100, data.length);
-                        newHtml += `<div class="victor-item">
-                            <span>👤 <b>${v.name}</b> — ${v.percent || 100}% (<span style="color:#00ff66">+${pts} PTS</span>)</span>
-                            <a href="${v.video}" target="_blank" class="video-btn">▶ Видео</a>
-                        </div>`;
-                        
-                        if (!playerScores[v.name]) playerScores[v.name] = 0;
-                        playerScores[v.name] += pts;
-                    });
-                    newHtml += `</div>`;
+                if (data.length === 0) { 
+                    list.innerHTML = 'Лист пуст.'; 
+                    document.getElementById('leaderboard-content').innerHTML = 'Нет рекордов.';
+                    return; 
                 }
-                newHtml += `</div>`;
-            });
+                
+                data.sort((a, b) => a.position - b.position);
+                let playerScores = {};
+                let newHtml = '';
 
-            // Мягко обновляем HTML на странице только если он реально изменился
-            if (list.innerHTML !== newHtml) {
-                list.innerHTML = newHtml;
-            }
+                data.forEach(d => {
+                    const isSelected = selectedId === d.id;
+                    let posColor = '#ff4a4a';
+                    if (d.position === 1) posColor = '#ffd700';
+                    if (d.position === 2) posColor = '#c0c0c0';
+                    if (d.position === 3) posColor = '#cd7f32';
+                    
+                    newHtml += `<div class="demon-card-wrapper ${isSelected ? 'active' : ''}" style="border-left-color: ${posColor}">
+                        <div onclick='selectDemon(${JSON.stringify(d)})'>
+                            <h3><span style="color: ${posColor}">#${d.position}</span> - ${d.name}</h3>
+                            <p>Создатель: <span style="color:#fff">${d.creator}</span> | Мин. процент: <span style="color:#ffb84d">${d.minPercent || 100}%</span></p>
+                        </div>
+                    `;
 
-            renderLeaderboard(playerScores);
+                    if (d.victors && d.victors.length > 0) {
+                        newHtml += `<div class="victors-list"><strong>🏆 Рекорды:</strong>`;
+                        d.victors.forEach(v => {
+                            let pts = calculatePoints(d.position, v.percent || 100, d.minPercent || 100, data.length);
+                            newHtml += `<div class="victor-item">
+                                <span>👤 <b>${v.name}</b> — ${v.percent || 100}% (<span style="color:#00ff66">+${pts} PTS</span>)</span>
+                                <a href="${v.video}" target="_blank" class="video-btn">▶ Видео</a>
+                            </div>`;
+                            if (!playerScores[v.name]) playerScores[v.name] = 0;
+                            playerScores[v.name] += pts;
+                        });
+                        newHtml += `</div>`;
+                    }
+                    newHtml += `</div>`;
+                });
+
+                if (list.innerHTML !== newHtml) { list.innerHTML = newHtml; }
+                renderLeaderboard(playerScores);
+            } catch (e) { list.innerHTML = 'Нет связи с сервером.'; }
         }
         function renderLeaderboard(scores) {
             const board = document.getElementById('leaderboard-content');
-            
             let sortedPlayers = Object.keys(scores)
                 .map(name => ({ name: name, score: Math.round(scores[name] * 10) / 10 }))
                 .sort((a,b) => b.score - a.score)
@@ -257,17 +180,11 @@
                 </tr>`;
             });
             html += `</table>`;
-            
-            if (board.innerHTML !== html) {
-                board.innerHTML = html;
-            }
+            if (board.innerHTML !== html) { board.innerHTML = html; }
         }
 
         function selectDemon(demon) {
-            // Запоминаем выбор, только если кликнули по новому ID
-            if (selectedId === demon.id) return;
             selectedId = demon.id;
-            
             document.getElementById('form-title').innerText = "Редактировать уровень";
             document.getElementById('form-position').value = demon.position;
             document.getElementById('form-name').value = demon.name;
@@ -279,7 +196,6 @@
             document.getElementById('btn-cancel-edit').style.display = 'block';
             document.getElementById('btn-clear-fields').style.display = 'none';
             document.getElementById('victor-panel').style.display = 'block';
-            loadDemons();
         }
 
         function createNewDemonFields() {
@@ -290,7 +206,6 @@
             document.getElementById('btn-cancel-edit').style.display = 'none';
             document.getElementById('btn-clear-fields').style.display = 'block';
             document.getElementById('victor-panel').style.display = 'none';
-            loadDemons();
         }
 
         function clearFormInputOnly() {
@@ -302,9 +217,9 @@
             document.getElementById('form-admin-code').value = '';
         }
 
-        function saveDemonChanges() {
+        async function saveDemonChanges() {
             if (!checkAdmin()) return;
-
+            const adminCode = document.getElementById('form-admin-code').value;
             const position = document.getElementById('form-position').value;
             const name = document.getElementById('form-name').value;
             const creator = document.getElementById('form-creator').value;
@@ -312,70 +227,48 @@
             const minPercent = document.getElementById('form-min-percent').value;
             if (!position || !name || !creator || !verifier || !minPercent) { alert("Заполните все поля!"); return; }
 
-            let demons = JSON.parse(localStorage.getItem('local_db_v4') || '[]');
-
-            if (selectedId !== null) {
-                const demon = demons.find(d => d.id === selectedId);
-                if (demon) {
-                    demon.position = parseInt(position);
-                    demon.name = name;
-                    demon.creator = creator;
-                    demon.verifier = verifier;
-                    demon.minPercent = parseInt(minPercent);
-                }
-            } else {
-                demons.push({
-                    id: "id_" + Date.now(),
-                    position: parseInt(position),
-                    name: name,
-                    creator: creator,
-                    verifier: verifier,
-                    minPercent: parseInt(minPercent),
-                    victors: []
+            const body = { position: parseInt(position), name, creator, verifier, minPercent, id: selectedId };
+            try {
+                const url = selectedId !== null ? `/api/demons/update` : `/api/demons/add`;
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
+                    body: JSON.stringify(body)
                 });
-            }
-
-            localStorage.setItem('local_db_v4', JSON.stringify(demons));
-            alert("Уровень успешно сохранен!");
-            createNewDemonFields();
+                if (res.ok) { alert("Уровень сохранен в глобальное облако!"); createNewDemonFields(); }
+            } catch (e) { alert("Ошибка сохранения."); }
         }
 
-        function deleteDemon() {
+        async function deleteDemon() {
             if (!checkAdmin()) return;
             if (selectedId === null || !confirm("Вы уверены, что хотите НАВСЕГДА удалить уровень?")) return;
-            
-            let demons = JSON.parse(localStorage.getItem('local_db_v4') || '[]');
-            demons = demons.filter(d => d.id !== selectedId);
-            
-            localStorage.setItem('local_db_v4', JSON.stringify(demons));
-            alert("Уровень успешно удален!");
-            createNewDemonFields();
+            const adminCode = document.getElementById('form-admin-code').value;
+            try {
+                const res = await fetch('/api/demons/delete', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
+                    body: JSON.stringify({ id: selectedId })
+                });
+                if (res.ok) { alert("Уровень удален для всех!"); createNewDemonFields(); }
+            } catch (e) { alert("Ошибка удаления."); }
         }
 
-        function addVictor() {
+        async function addVictor() {
             if (!checkAdmin()) return;
-
+            const adminCode = document.getElementById('form-admin-code').value;
             const nInput = document.getElementById('victor-name');
             const pInput = document.getElementById('victor-percent');
             const vInput = document.getElementById('victor-video');
             if (!nInput.value || !pInput.value || !vInput.value || selectedId === null) { alert("Заполните все поля рекорда!"); return; }
             
-            let demons = JSON.parse(localStorage.getItem('local_db_v4') || '[]');
-            const demon = demons.find(d => d.id === selectedId);
-            if (demon) {
-                if (parseInt(pInput.value) < demon.minPercent) {
-                    alert(`Ошибка: Процент игрока меньше минимального лимита листа (${demon.minPercent}%)!`);
-                    return;
-                }
-                if (!demon.victors) demon.victors = [];
-                demon.victors.push({ name: nInput.value, percent: parseInt(pInput.value), video: vInput.value });
-                localStorage.setItem('local_db_v4', JSON.stringify(demons));
-                alert("Рекорд успешно записан!");
-                nInput.value = '';
-                pInput.value = '100';
-                vInput.value = '';
-                loadDemons();
-            }
+            try {
+                const res = await fetch('/api/demons/add-victor', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
+                    body: JSON.stringify({ id: selectedId, name: nInput.value, percent: parseInt(pInput.value), video: vInput.value })
+                });
+                if (res.ok) { alert("Рекорд записан для всех!"); nInput.value = ''; pInput.value = '100'; vInput.value = ''; }
+            } catch (e) { console.error(e); }
         }
     </script>
 </body>

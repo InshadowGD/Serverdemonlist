@@ -1,80 +1,114 @@
 const express = require('express');
 const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-const DB_PATH = path.join('/tmp', 'database.json');
+const SECRET_ADMIN_CODE = '090909';
 
-function readDB() {
+const KV_URL = process.env.KV_REST_API_URL;
+const KV_TOKEN = process.env.KV_REST_API_TOKEN;
+
+async function readDB() {
+    if (!KV_URL || !KV_TOKEN) return [];
     try {
-        if (!fs.existsSync(DB_PATH)) {
-            const startData = [{ position: 1, name: "Acheron", creator: "Riot", verifier: "Riot", victors: [] }];
-            fs.writeFileSync(DB_PATH, JSON.stringify(startData, null, 2), 'utf8');
-            return startData;
+        const response = await fetch(`${KV_URL}/get/demons`, {
+            headers: { Authorization: `Bearer ${KV_TOKEN}` }
+        });
+        const result = await response.json();
+        if (result && result.result) {
+            return typeof result.result === 'string' ? JSON.parse(result.result) : result.result;
         }
-        return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+        const startData = [{ id: "id_default", position: 1, name: "Acheron", creator: "Riot", verifier: "Riot", minPercent: 100, victors: [] }];
+        await writeDB(startData);
+        return startData;
     } catch (e) { return []; }
 }
 
-function writeDB(data) {
-    try { 
-        fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf8'); 
+async function writeDB(data) {
+    if (!KV_URL || !KV_TOKEN) return;
+    try {
+        await fetch(`${KV_URL}/set/demons`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${KV_TOKEN}` },
+            body: JSON.stringify(data)
+        });
     } catch (e) {}
 }
 
-app.get('/api/demons', (req, res) => {
-    res.json(readDB());
+function isNotAdmin(req) {
+    return req.headers['x-admin-code'] !== SECRET_ADMIN_CODE;
+}
+
+app.get('/api/demons', async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+    
+    const data = await readDB();
+    res.json(data);
 });
 
-app.post('/api/demons/add', (req, res) => {
-    const { position, name, creator, verifier } = req.body;
-    if (!position || !name || !creator || !verifier) return res.status(400).json({ success: false });
-    let demons = readDB();
-    demons.push({ position: parseInt(position), name, creator, verifier, victors: [] });
+app.post('/api/demons/add', async (req, res) => {
+    if (isNotAdmin(req)) return res.status(403).json({ success: false, error: "Access Denied" });
+    const { position, name, creator, verifier, minPercent } = req.body;
+    if (!position || !name || !creator || !verifier || !minPercent) return res.status(400).json({ success: false });
+    
+    let demons = await readDB();
+    demons.push({
+        id: "id_" + Date.now(),
+        position: parseInt(position),
+        name: name,
+        creator: creator,
+        verifier: verifier,
+        minPercent: parseInt(minPercent),
+        victors: []
+    });
     demons.sort((a, b) => a.position - b.position);
-    writeDB(demons);
+    await writeDB(demons);
     res.json({ success: true });
 });
 
-app.post('/api/demons/update', (req, res) => {
-    const { position, name, creator, verifier } = req.body;
-    let demons = readDB();
-    const demon = demons.find(d => d.position === parseInt(position));
+app.post('/api/demons/update', async (req, res) => {
+    if (isNotAdmin(req)) return res.status(403).json({ success: false, error: "Access Denied" });
+    const { position, name, creator, verifier, minPercent, id } = req.body;
+    
+    let demons = await readDB();
+    const demon = demons.find(d => d.id === id);
     if (demon) {
+        demon.position = parseInt(position);
         demon.name = name;
         demon.creator = creator;
         demon.verifier = verifier;
-    } else {
-        demons.push({ position: parseInt(position), name, creator, verifier, victors: [] });
-        demons.sort((a, b) => a.position - b.position);
+        demon.minPercent = parseInt(minPercent);
     }
-    writeDB(demons);
+    await writeDB(demons);
     res.json({ success: true });
 });
 
-// НОВЫЙ ЧИСТЫЙ МАРШРУТ УДАЛЕНИЯ БЕЗ ПАРАМЕТРОВ В ССЫЛКЕ
-app.post('/api/demons/delete', (req, res) => {
-    const { position } = req.body; // Получаем позицию прямо из тела запроса
-    if (!position) return res.status(400).json({ success: false });
+app.post('/api/demons/delete', async (req, res) => {
+    if (isNotAdmin(req)) return res.status(403).json({ success: false, error: "Access Denied" });
+    const { id } = req.body;
     
-    let demons = readDB();
-    demons = demons.filter(d => parseInt(d.position) !== parseInt(position));
-    writeDB(demons);
+    let demons = await readDB();
+    demons = demons.filter(d => d.id !== id);
+    await writeDB(demons);
     res.json({ success: true });
 });
 
-app.post('/api/demons/add-victor', (req, res) => {
-    const { position, name, video } = req.body;
-    let demons = readDB();
-    const demon = demons.find(d => d.position === parseInt(position));
+// ИСПРАВЛЕНО: Теперь рекорды четко привязываются по уникальному ID уровня!
+app.post('/api/demons/add-victor', async (req, res) => {
+    if (isNotAdmin(req)) return res.status(403).json({ success: false, error: "Access Denied" });
+    const { id, name, percent, video } = req.body;
+    
+    let demons = await readDB();
+    const demon = demons.find(d => d.id === id);
     if (demon) {
         if (!demon.victors) demon.victors = [];
-        demon.victors.push({ name, video });
-        writeDB(demons);
+        demon.victors.push({ name, percent: parseInt(percent), video });
+        await writeDB(demons);
         return res.json({ success: true });
     }
     res.status(404).json({ success: false });
