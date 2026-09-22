@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Server Demonlist</title>
     
-    <!-- ПОДКЛЮЧАЕМ ОФИЦИАЛЬНЫЙ МОДУЛЬ ЖИВОЙ БАЗЫ ДАННЫХ SUPABASE -->
+    <!-- ПОДКЛЮЧАЕМ СКРИПТ ЖИВОГО ОБЛАКА SUPABASE -->
     <script src="https://jsdelivr.net"></script>
 
     <style>
@@ -74,7 +74,7 @@
     <div class="container">
         <div class="main-content">
             <h1>Server Demonlist</h1>
-            <div id="demons-list">Синхронизация с живой базой Supabase...</div>
+            <div id="demons-list">Синхронизация с живой базой...</div>
         </div>
         <div class="sidebar">
             <div class="panel">
@@ -116,11 +116,11 @@
         let selectedId = null;
         let globalDemonsList = [];
 
-        // ВЕЧНЫЕ ГЛОБАЛЬНЫЕ КЛЮЧИ ЖИВОГО ОБЛАКА SUPABASE ДЛЯ ТВОЕГО ПРОЕКТА
+        // ВЫДЕЛЕННЫЕ КЛЮЧИ ИНТЕРНЕТ-ОБЛАКА SUPABASE ДЛЯ ТВОЕГО САЙТА
         const SUPABASE_URL = "https://supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1bmJpeHNrYmJ5d3VuYml4c2tiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTI4OTAwMDAsImV4cCI6MjAyODg5MDAwMH0.1v8XbV7_N9tB_5y_mC8Sly23nIeQ59L5L_hKW";
         
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         window.onload = function() { 
             listenRealtimeCloud(); 
@@ -146,15 +146,14 @@
             }
         }
 
-        // ЖИВОЙ ПРЯМОЙ КАНАЛ ОБЛАКА: Синхронизирует экраны за 0.1 секунды без перезагрузок!
         async function listenRealtimeCloud() {
-            // Читаем базу первый раз при входе
-            const { data } = await supabase.from('demonlist').select('*').single();
-            globalDemonsList = data && data.content ? data.record_json : [];
+            // ИСПРАВЛЕНО: Теперь точное чтение ячейки record_json без синтаксических сбоев!
+            const { data } = await _supabase.from('demonlist').select('record_json').eq('id', 1).single();
+            globalDemonsList = data && data.record_json ? data.record_json : [];
             renderDOM();
 
-            // Включаем WebSocket прослушивание живых изменений
-            supabase.channel('schema-db-changes')
+            // Включаем WebSocket-прослушивание живых изменений
+            _supabase.channel('schema-db-changes')
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'demonlist' }, payload => {
                     globalDemonsList = payload.new.record_json || [];
                     renderDOM();
@@ -163,7 +162,7 @@
 
         function renderDOM() {
             const list = document.getElementById('demons-list');
-            if (globalDemonsList.length === 0) { 
+            if (!globalDemonsList || globalDemonsList.length === 0) { 
                 list.innerHTML = 'Лист пуст.'; 
                 document.getElementById('leaderboard-content').innerHTML = 'Пока нет записанных рекордов.';
                 return; 
@@ -241,14 +240,14 @@
                 globalDemonsList.push({ id: "id_" + Date.now(), position: parseInt(p), name: n, creator: c, verifier: v, minPercent: parseInt(m), victors: [] });
             }
 
-            await supabase.from('demonlist').update({ record_json: globalDemonsList }).eq('id', 1);
+            await _supabase.from('demonlist').update({ record_json: globalDemonsList }).eq('id', 1);
             alert("Успешно сохранено для всех!"); createNewDemonFields();
         }
 
         async function deleteDemon() {
             if (!checkAdmin() || !confirm("Вы уверены?")) return;
             globalDemonsList = globalDemonsList.filter(d => d.id !== selectedId);
-            await supabase.from('demonlist').update({ record_json: globalDemonsList }).eq('id', 1);
+            await _supabase.from('demonlist').update({ record_json: globalDemonsList }).eq('id', 1);
             alert("Удалено!"); createNewDemonFields();
         }
 
@@ -263,7 +262,7 @@
                 if (!demon.victors) demon.victors = [];
                 demon.victors.push({ name: n.value, percent: parseInt(p.value), video: v.value });
                 
-                await supabase.from('demonlist').update({ record_json: globalDemonsList }).eq('id', 1);
+                await _supabase.from('demonlist').update({ record_json: globalDemonsList }).eq('id', 1);
                 alert("Рекорд записан!"); n.value = ''; p.value = '100'; v.value = '';
             }
         }
