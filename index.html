@@ -56,10 +56,14 @@
 
     <script>
         const SECRET_ADMIN_CODE = '090909';
-        let selectedPos = null;
-        let originalPos = null;
+        let selectedId = null; // Уникальный ID для безошибочного выбора уровня
 
         window.onload = function() { 
+            // Инициализация базы данных, если она пустая
+            if (!localStorage.getItem('local_demons')) {
+                const startData = [{ id: "id_1", position: 1, name: "Acheron", creator: "Riot", verifier: "Riot", victors: [] }];
+                localStorage.setItem('local_demons', JSON.stringify(startData));
+            }
             loadDemons(); 
         };
 
@@ -71,43 +75,40 @@
             }
             return true;
         }
-        async function loadDemons() {
+        function loadDemons() {
             const list = document.getElementById('demons-list');
-            try {
-                const response = await fetch('/api/demons');
-                const data = await response.json();
-                list.innerHTML = ''; 
-                if (data.length === 0) { list.innerHTML = 'Лист пуст.'; return; }
+            list.innerHTML = '';
+            
+            const data = JSON.parse(localStorage.getItem('local_demons') || '[]');
+            if (data.length === 0) { list.innerHTML = 'Лист пуст.'; return; }
+            
+            data.sort((a, b) => a.position - b.position);
+            data.forEach(d => {
+                const isSelected = selectedId === d.id;
+                const wrapper = document.createElement('div');
+                wrapper.className = `demon-card-wrapper ${isSelected ? 'active' : ''}`;
                 
-                data.sort((a, b) => a.position - b.position);
-                data.forEach(d => {
-                    const isSelected = originalPos === parseInt(d.position);
-                    const wrapper = document.createElement('div');
-                    wrapper.className = `demon-card-wrapper ${isSelected ? 'active' : ''}`;
-                    
-                    let html = `
-                        <div onclick='selectDemon(${JSON.stringify(d)})'>
-                            <h3>#${d.position} - ${d.name}</h3>
-                            <p style="color:#8a8d98; margin:0;">Создатель: ${d.creator} | Верификатор: ${d.verifier || 'Не указан'}</p>
-                        </div>
-                    `;
+                let html = `
+                    <div onclick='selectDemon(${JSON.stringify(d)})'>
+                        <h3>#${d.position} - ${d.name}</h3>
+                        <p style="color:#8a8d98; margin:0;">Создатель: ${d.creator} | Верификатор: ${d.verifier || 'Не указан'}</p>
+                    </div>
+                `;
 
-                    if (d.victors && d.victors.length > 0) {
-                        html += `<div class="victors-list"><strong>Победители:</strong>`;
-                        d.victors.forEach(v => {
-                            html += `<div class="victor-item"><span>👤 ${v.name}</span><a href="${v.video}" target="_blank" style="color:#4af3ff;">🎬 Видео</a></div>`;
-                        });
-                        html += `</div>`;
-                    }
-                    wrapper.innerHTML = html;
-                    list.appendChild(wrapper);
-                });
-            } catch (e) { list.innerHTML = 'Нет связи с сервером.'; }
+                if (d.victors && d.victors.length > 0) {
+                    html += `<div class="victors-list"><strong>Победители:</strong>`;
+                    d.victors.forEach(v => {
+                        html += `<div class="victor-item"><span>👤 ${v.name}</span><a href="${v.video}" target="_blank" style="color:#4af3ff;">🎬 Видео</a></div>`;
+                    });
+                    html += `</div>`;
+                }
+                wrapper.innerHTML = html;
+                list.appendChild(wrapper);
+            });
         }
 
         function selectDemon(demon) {
-            selectedPos = parseInt(demon.position);
-            originalPos = parseInt(demon.position);
+            selectedId = demon.id;
             document.getElementById('form-title').innerText = "Редактировать уровень";
             document.getElementById('form-position').value = demon.position;
             document.getElementById('form-name').value = demon.name;
@@ -122,8 +123,7 @@
         }
 
         function createNewDemonFields() {
-            selectedPos = null;
-            originalPos = null;
+            selectedId = null;
             document.getElementById('form-title').innerText = "Добавить уровень";
             clearFormInputOnly();
             document.getElementById('btn-delete-demon').style.display = 'none';
@@ -141,7 +141,7 @@
             document.getElementById('form-admin-code').value = '';
         }
 
-        async function saveDemonChanges() {
+        function saveDemonChanges() {
             if (!checkAdmin()) return;
 
             const position = document.getElementById('form-position').value;
@@ -150,53 +150,65 @@
             const verifier = document.getElementById('form-verifier').value;
             if (!position || !name || !creator || !verifier) { alert("Заполните все поля!"); return; }
 
-            const body = { position: parseInt(position), name, creator, verifier };
-            try {
-                if (originalPos !== null && originalPos !== body.position) {
-                    await fetch('/api/demons/delete', { 
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ position: originalPos })
-                    });
+            let demons = JSON.parse(localStorage.getItem('local_demons') || '[]');
+
+            if (selectedId !== null) {
+                // Редактирование существующего
+                const demon = demons.find(d => d.id === selectedId);
+                if (demon) {
+                    demon.position = parseInt(position);
+                    demon.name = name;
+                    demon.creator = creator;
+                    demon.verifier = verifier;
                 }
-                const url = originalPos !== null ? `/api/demons/update` : `/api/demons/add`;
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
-                });
-                if (res.ok) { alert("Уровень успешно сохранен!"); createNewDemonFields(); }
-            } catch (e) { alert("Ошибка сохранения."); }
+            } else {
+                // Создание нового
+                const newDemon = {
+                    id: "id_" + Date.now(),
+                    position: parseInt(position),
+                    name: name,
+                    creator: creator,
+                    verifier: verifier,
+                    victors: []
+                };
+                demons.push(newDemon);
+            }
+
+            localStorage.setItem('local_demons', JSON.stringify(demons));
+            alert("Уровень успешно сохранен!");
+            createNewDemonFields();
         }
 
-        async function deleteDemon() {
+        function deleteDemon() {
             if (!checkAdmin()) return;
-            if (originalPos === null || !confirm("Вы уверены, что хотите удалить уровень?")) return;
-            try {
-                // Передаем точную цифру в безопасном теле запроса
-                const res = await fetch('/api/demons/delete', { 
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ position: originalPos })
-                });
-                if (res.ok) { alert("Уровень успешно удален!"); createNewDemonFields(); }
-            } catch (e) { alert("Ошибка удаления."); }
+            if (selectedId === null || !confirm("Вы уверены, что хотите НАВСЕГДА удалить уровень?")) return;
+            
+            let demons = JSON.parse(localStorage.getItem('local_demons') || '[]');
+            demons = demons.filter(d => d.id !== selectedId);
+            
+            localStorage.setItem('local_demons', JSON.stringify(demons));
+            alert("Уровень успешно удален!");
+            createNewDemonFields();
         }
 
-        async function addVictor() {
+        function addVictor() {
             if (!checkAdmin()) return;
 
             const nInput = document.getElementById('victor-name');
             const vInput = document.getElementById('victor-video');
-            if (!nInput.value || !vInput.value || originalPos === null) { alert("Заполните поля рекорда!"); return; }
-            try {
-                const res = await fetch('/api/demons/add-victor', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ position: originalPos, name: nInput.value, video: vInput.value })
-                });
-                if (res.ok) { alert("Рекорд записан!"); nInput.value = ''; vInput.value = ''; loadDemons(); }
-            } catch (e) { console.error(e); }
+            if (!nInput.value || !vInput.value || selectedId === null) { alert("Заполните поля рекорда!"); return; }
+            
+            let demons = JSON.parse(localStorage.getItem('local_demons') || '[]');
+            const demon = demons.find(d => d.id === selectedId);
+            if (demon) {
+                if (!demon.victors) demon.victors = [];
+                demon.victors.push({ name: nInput.value, video: vInput.value });
+                localStorage.setItem('local_demons', JSON.stringify(demons));
+                alert("Рекорд записан!");
+                nInput.value = '';
+                vInput.value = '';
+                loadDemons();
+            }
         }
     </script>
 </body>
