@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { kv } = require('@vercel/kv'); // Нативный клиент Redis от Vercel
+const { kv } = require('@vercel/kv'); // Подключаем официальный нативный клиент Redis
 const app = express();
 
 app.use(cors());
@@ -10,14 +10,9 @@ const SECRET_ADMIN_CODE = '090909';
 
 async function readDB() {
     try {
-        // Читаем данные как строку, чтобы избежать багов с типами JSON
-        const rawData = await kv.get('demons_v2');
-        if (!rawData) {
-            // Если база пустая — создаём стартовый массив
-            const startData = [{ id: "id_default", position: 1, name: "Acheron", creator: "Riot", verifier: "Riot", minPercent: 100, victors: [] }];
-            await kv.set('demons_v2', JSON.stringify(startData));
-            return startData;
-        }
+        // Читаем данные напрямую из облачного хранилища Vercel Redis
+        const rawData = await kv.get('demons_v3');
+        if (!rawData) return [];
         return typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
     } catch (e) {
         console.error("Ошибка чтения Redis:", e);
@@ -27,8 +22,8 @@ async function readDB() {
 
 async function writeDB(data) {
     try {
-        // Принудительно превращаем массив в строку перед записью в облако
-        await kv.set('demons_v2', JSON.stringify(data));
+        // Записываем данные в облако как чистую строку и ЖДЕМ окончания операции (await)
+        await kv.set('demons_v3', JSON.stringify(data));
     } catch (e) {
         console.error("Ошибка записи Redis:", e);
     }
@@ -54,9 +49,6 @@ app.post('/api/demons/add', async (req, res) => {
     if (!position || !name || !creator || !minPercent) return res.status(400).json({ success: false });
     
     let demons = await readDB();
-    // Фильтруем стартовый Ачерон, если добавляется первый реальный уровень
-    demons = demons.filter(d => d.id !== 'id_default');
-    
     demons.push({
         id: "id_" + Date.now(),
         position: parseInt(position),
@@ -67,6 +59,8 @@ app.post('/api/demons/add', async (req, res) => {
         victors: []
     });
     demons.sort((a, b) => a.position - b.position);
+    
+    // Ждем, пока база Redis намертво зафиксирует изменения в интернете
     await writeDB(demons);
     res.json({ success: true });
 });
