@@ -33,6 +33,13 @@
                 <div class="form-group"><label>Название</label><input type="text" id="form-name"></div>
                 <div class="form-group"><label>Создатель</label><input type="text" id="form-creator"></div>
                 <div class="form-group"><label>Верификатор</label><input type="text" id="form-verifier"></div>
+                
+                <!-- НОВОЕ ПОЛЕ: СЕКРЕТНЫЙ КОД АДМИНА -->
+                <div class="form-group" style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #2d3039;">
+                    <label style="color: #ffb84d; font-weight: bold;">🔑 Код администратора</label>
+                    <input type="password" id="form-admin-code" placeholder="Введите ваш секретный код">
+                </div>
+
                 <button onclick="saveDemonChanges()" style="background:#ff4a4a; color:#fff;">Сохранить уровень</button>
                 <button onclick="createNewDemonFields()">Очистить форму</button>
                 <button id="btn-delete-demon" onclick="deleteDemon()" style="background:#cc2424; color:#fff; display:none;">Удалить этот уровень</button>
@@ -48,9 +55,22 @@
     </div>
 
     <script>
+        // === ТВОЙ СЕКРЕТНЫЙ ПАРОЛЬ ===
+        // Поменяй слово 'мойпароль123' на любой свой секретный код внутри кавычек!
+        const SECRET_ADMIN_CODE = '090909'; 
+
         let selectedPos = null;
 
         window.onload = function() { loadDemons(); };
+
+        function checkAdmin() {
+            const inputCode = document.getElementById('form-admin-code').value;
+            if (inputCode !== SECRET_ADMIN_CODE) {
+                alert("Ошибка: Неверный код администратора! Изменения отклонены.");
+                return false;
+            }
+            return true;
+        }
 
         async function loadDemons() {
             const list = document.getElementById('demons-list');
@@ -107,12 +127,15 @@
             document.getElementById('form-name').value = '';
             document.getElementById('form-creator').value = '';
             document.getElementById('form-verifier').value = '';
+            document.getElementById('form-admin-code').value = '';
             document.getElementById('btn-delete-demon').style.display = 'none';
             document.getElementById('victor-panel').style.display = 'none';
             loadDemons();
         }
 
         async function saveDemonChanges() {
+            if (!checkAdmin()) return; // Проверка пароля
+
             const position = document.getElementById('form-position').value;
             const name = document.getElementById('form-name').value;
             const creator = document.getElementById('form-creator').value;
@@ -135,6 +158,7 @@
         }
 
         async function deleteDemon() {
+            if (!checkAdmin()) return; // Проверка пароля
             if (selectedPos === null || !confirm("Удалить уровень?")) return;
             try {
                 const res = await fetch(`/api/demons/delete/${selectedPos}`, { method: 'POST' });
@@ -143,6 +167,7 @@
         }
 
         async function addVictor() {
+            // Рекорды (видео) оставляем открытыми для обычных игроков, чтобы они могли присылать свои клипы!
             const nInput = document.getElementById('victor-name');
             const vInput = document.getElementById('victor-video');
             if (!nInput.value || !vInput.value || selectedPos === null) { alert("Заполните поля рекорда!"); return; }
