@@ -12,9 +12,29 @@
             padding: 40px;
             min-height: 100vh;
         }
-        .container { display: flex; gap: 35px; max-width: 1400px; margin: 0 auto; }
+        .container { display: flex; gap: 35px; max-width: 1400px; margin: 0 auto; align-items: flex-start; }
         .main-content { flex: 2; background: rgba(23, 24, 28, 0.6); padding: 30px; border-radius: 16px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
-        .sidebar { flex: 1; display: flex; flex-direction: column; gap: 25px; }
+        
+        /* МАГИЯ ТУТ: Делаем правую колонку плавающей при скролле */
+        .sidebar { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 25px; 
+            position: -webkit-sticky;
+            position: sticky;
+            top: 40px; /* Отступ от верхнего края экрана при прокрутке */
+            max-height: calc(100vh - 80px);
+            overflow-y: auto; /* Если контента в сайдбаре много, он будет аккуратно листаться сам внутри */
+            padding-right: 5px;
+        }
+        
+        /* Стилизация полосы прокрутки внутри сайдбара, чтобы была красивой */
+        .sidebar::-webkit-scrollbar { width: 6px; }
+        .sidebar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 10px; }
+        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .sidebar::-webkit-scrollbar-thumb:hover { background: rgba(255, 74, 74, 0.3); }
+
         .panel { background: rgba(28, 29, 34, 0.8); padding: 25px; border-radius: 16px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2); }
         
         h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: 1px; margin-top: 0; margin-bottom: 25px; background: linear-gradient(45deg, #ff4a4a, #ffb84d); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
@@ -46,7 +66,7 @@
         
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; color: #8a8d98; margin-bottom: 6px; }
-        input { width: 100%; padding: 12px; border-radius: 8px; background: #121316; border: 1px solid #2d3039; color: #fff; font-sizing: border-box; }
+        input { width: 100%; padding: 12px; border-radius: 8px; background: #121316; border: 1px solid #2d3039; color: #fff; box-sizing: border-box; }
         input:focus { border-color: #ff4a4a; outline: none; }
         
         button { width: 100%; padding: 12px; font-weight: bold; font-size: 0.95rem; cursor: pointer; margin-top: 10px; border: none; border-radius: 8px; transition: all 0.2s; }
@@ -56,11 +76,10 @@
         .victor-item { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px; margin: 6px 0; }
         .victor-item a { color: #4af3ff; text-decoration: none; font-weight: 600; }
         
-        /* Стили для таблицы лидеров */
-        .leaderboard-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        .leaderboard-table th { text-align: left; padding: 10px; color: #8a8d98; font-size: 0.85rem; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .leaderboard-table td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.02); }
-        .rank-badge { display: inline-block; width: 24px; height: 24px; text-align: center; line-height: 24px; border-radius: 50%; font-weight: bold; font-size: 0.85rem; }
+        .leaderboard-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .leaderboard-table th { text-align: left; padding: 8px; color: #8a8d98; font-size: 0.8rem; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .leaderboard-table td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 0.95rem; }
+        .rank-badge { display: inline-block; width: 22px; height: 24px; text-align: center; line-height: 22px; border-radius: 50%; font-weight: bold; font-size: 0.8rem; }
     </style>
 </head>
 <body>
@@ -69,12 +88,6 @@
         <div class="main-content">
             <h1>Server Demonlist</h1>
             <div id="demons-list">Загрузка списка...</div>
-            
-            <!-- НОВАЯ ПАНЕЛЬ: ТАБЛИЦА ЛИДЕРОВ -->
-            <div style="margin-top: 50px; background: rgba(28, 29, 34, 0.4); padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.03);">
-                <h2>🏆 Таблица лидеров топа</h2>
-                <div id="leaderboard-content">Подсчет очков...</div>
-            </div>
         </div>
 
         <div class="sidebar">
@@ -84,8 +97,6 @@
                 <div class="form-group"><label>Название демона</label><input type="text" id="form-name"></div>
                 <div class="form-group"><label>Создатель</label><input type="text" id="form-creator"></div>
                 <div class="form-group"><label>Верификатор</label><input type="text" id="form-verifier"></div>
-                
-                <!-- НОВОЕ ПОЛЕ: МИН. ПРОЦЕНТ ДЛЯ ЛИСТА -->
                 <div class="form-group"><label style="color: #ffb84d;">📉 Минимальный процент листа (%)</label><input type="number" id="form-min-percent" value="100" min="0" max="100"></div>
                 
                 <div class="form-group" style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.1);">
@@ -102,12 +113,15 @@
             <div class="panel" id="victor-panel" style="display: none;">
                 <h2>Добавить рекорд / Процент</h2>
                 <div class="form-group"><label>Игрок</label><input type="text" id="victor-name"></div>
-                
-                <!-- НОВЫЕ ПОЛЯ: ПРОЦЕНТ ИГРОКА -->
                 <div class="form-group"><label>Набранный процент (%)</label><input type="number" id="victor-percent" value="100" min="0" max="100"></div>
-                
                 <div class="form-group"><label>Видео (YouTube)</label><input type="url" id="victor-video"></div>
                 <button onclick="addVictor()" style="background: linear-gradient(135deg, #00ff66 0%, #00c850 100%); color:#000;">Записать рекорд</button>
+            </div>
+
+            <!-- ТАБЛИЦА ЛИДЕРОВ ПЕРЕНЕСЕНА СЮДА, В ПРАВУЮ ПАНЕЛЬ -->
+            <div class="panel">
+                <h2>🏆 Таблица лидеров</h2>
+                <div id="leaderboard-content">Подсчет очков...</div>
             </div>
         </div>
     </div>
@@ -132,18 +146,15 @@
             }
             return true;
         }
-        // Вычисление турнирных очков (формула Demonlist)
         function calculatePoints(position, percent, minPercent, totalDemons) {
             if (percent < minPercent) return 0;
             
-            // Максимум за Топ-1 — 250 очков. Дальше плавно падает в зависимости от места.
             let maxPoints = 250 - (position - 1) * (200 / Math.max(totalDemons, 1));
             if (maxPoints < 10) maxPoints = 10; 
             
             if (parseInt(percent) === 100) {
                 return Math.round(maxPoints * 10) / 10;
             } else {
-                // Очки за прогресс (лист-процент)
                 let percentPoints = maxPoints * ((percent - minPercent) / (100 - minPercent)) * 0.6;
                 return Math.round(percentPoints * 10) / 10;
             }
@@ -156,7 +167,7 @@
             const data = JSON.parse(localStorage.getItem('local_db_v4') || '[]');
             if (data.length === 0) { 
                 list.innerHTML = 'Лист пуст.'; 
-                document.getElementById('leaderboard-content').innerHTML = 'Нет рекордов для подсчета.';
+                document.getElementById('leaderboard-content').innerHTML = 'Нет рекордов.';
                 return; 
             }
             
@@ -177,12 +188,12 @@
                 let html = `
                     <div onclick='selectDemon(${JSON.stringify(d)})'>
                         <h3><span style="color: ${posColor}">#${d.position}</span> - ${d.name}</h3>
-                        <p>Создатель: <span style="color:#fff">${d.creator}</span> | Мин. процент листа: <span style="color:#ffb84d">${d.minPercent || 100}%</span></p>
+                        <p>Создатель: <span style="color:#fff">${d.creator}</span> | Мин. процент: <span style="color:#ffb84d">${d.minPercent || 100}%</span></p>
                     </div>
                 `;
 
                 if (d.victors && d.victors.length > 0) {
-                    html += `<div class="victors-list"><strong>🏆 Рекорды уровня:</strong>`;
+                    html += `<div class="victors-list"><strong>🏆 Рекорды:</strong>`;
                     d.victors.forEach(v => {
                         let pts = calculatePoints(d.position, v.percent || 100, d.minPercent || 100, data.length);
                         html += `<div class="victor-item"><span>👤 <b>${v.name}</b> — ${v.percent || 100}% (<span style="color:#00ff66">+${pts} PTS</span>)</span><a href="${v.video}" target="_blank">🎬 Видео</a></div>`;
@@ -207,7 +218,7 @@
                 return;
             }
 
-            let html = `<table class="leaderboard-table"><tr><th>Место</th><th>Никнейм игрока</th><th>Всего очков (PTS)</th></tr>`;
+            let html = `<table class="leaderboard-table"><tr><th>Место</th><th>Игрок</th><th>Очки</th></tr>`;
             sortedPlayers.forEach((p, index) => {
                 let badgeStyle = "background: rgba(255,255,255,0.1); color: #fff;";
                 if (index === 0) badgeStyle = "background: #ffd700; color: #000;";
@@ -217,7 +228,7 @@
                 html += `<tr>
                     <td><span class="rank-badge" style="${badgeStyle}">${index + 1}</span></td>
                     <td><b>${p.name}</b></td>
-                    <td style="color: #00ff66; font-weight: bold;">${p.score} PTS</td>
+                    <td style="color: #00ff66; font-weight: bold;">${p.score}</td>
                 </tr>`;
             });
             html += `</table>`;
@@ -250,6 +261,7 @@
             document.getElementById('victor-panel').style.display = 'none';
             loadDemons();
         }
+
         function clearFormInputOnly() {
             document.getElementById('form-position').value = '';
             document.getElementById('form-name').value = '';
