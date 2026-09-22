@@ -67,13 +67,28 @@
             </div>
         </div>
     </div>
+
     <script>
         const SECRET_ADMIN_CODE = '090909';
         let selectedId = null;
         
-        // ПОДКЛЮЧАЕМ ВЕЧНЫЙ СКЛАД НАПРАВЛЯЕМ ЗАПРОСЫ ТУДА С ЖЕСТКИМ ОБХОДОМ CORS
         const BIN_URL = "https://jsonbin.io";
         const MASTER_KEY = "$2a$10$89M0v.N7Y7wL0h/xM60Mze7vN9tB/5y/mC8Sly23nIeQ59L5L/hKW";
+
+        // ДОБАВЛЕНО ЖЕСТКО И НА САМЫЙ ВЕРХ: Исправляем ошибку checkAdmin is not defined!
+        function checkAdmin() {
+            const inputCode = document.getElementById('form-admin-code').value;
+            if (inputCode !== SECRET_ADMIN_CODE) {
+                alert("Ошибка: Неверный код администратора!");
+                return false;
+            }
+            return true;
+        }
+
+        window.onload = function() { 
+            loadDemons(); 
+            setInterval(loadDemons, 3000); 
+        };
         function calculatePoints(position, percent, minPercent, totalDemons) {
             if (percent < minPercent) return 0;
             let maxPoints = 250 - (position - 1) * (200 / Math.max(totalDemons, 1));
@@ -85,7 +100,6 @@
 
         async function fetchGlobalData() {
             try {
-                // Добавляем случайный маркер времени, чтобы Vercel принудительно читал живую базу
                 const res = await fetch(`${BIN_URL}/latest?nocache=${Date.now()}`, {
                     headers: { 'X-Master-Key': MASTER_KEY }
                 });
