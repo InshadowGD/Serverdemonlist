@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Server Demonlist</title>
     <style>
-        /* Твой любимый премиальный дизайн карточек */
+        /* Настройки темы и геймерского дизайна */
         body { 
             background: radial-gradient(circle at top, #1a1c23 0%, #0f1015 100%); 
             color: #f1f2f6; 
@@ -71,7 +71,7 @@
     <div class="container">
         <div class="main-content">
             <h1>Server Demonlist</h1>
-            <div id="demons-list">Подключение к глобальной базе данных...</div>
+            <div id="demons-list">Подключение к облаку Redis...</div>
         </div>
 
         <div class="sidebar">
@@ -115,7 +115,7 @@
 
         window.onload = function() { 
             loadDemons(); 
-            setInterval(loadDemons, 2000); // Синхронизируем экраны каждые 2 секунды пулей
+            setInterval(loadDemons, 2000); 
         };
 
         function checkAdmin() {
@@ -138,11 +138,11 @@
             }
         }
 
-        // ЖЕСТКОЕ ПЕРЕКЛЮЧЕНИЕ НА СЕТЕВЫЕ ЗАПРОСЫ К ОБЛАКУ REDIS БЕЗ КЭША
+        // ИСПРАВЛЕНО: Запросы теперь идут по точным прямым путям, которые пробивают прокси Vercel
         async function loadDemons() {
             const list = document.getElementById('demons-list');
             try {
-                const response = await fetch('/api/demons?t=' + Date.now());
+                const response = await fetch('api/demons?t=' + Date.now());
                 const data = await response.json();
                 
                 if (!data || data.length === 0) { 
@@ -187,7 +187,7 @@
 
                 if (list.innerHTML !== newHtml) { list.innerHTML = newHtml; }
                 renderLeaderboard(playerScores);
-            } catch (e) { list.innerHTML = 'Синхронизация с сервером...'; }
+            } catch (e) { list.innerHTML = 'Лист пуст.'; }
         }
         function renderLeaderboard(scores) {
             const board = document.getElementById('leaderboard-content');
@@ -258,14 +258,16 @@
             const position = document.getElementById('form-position').value;
             const name = document.getElementById('form-name').value;
             const creator = document.getElementById('form-creator').value;
-            const verifier = document.getElementById('form-verifier').value || 'Не указан';
             const minPercent = document.getElementById('form-min-percent').value;
             
+            let verifier = document.getElementById('form-verifier').value;
+            if (!verifier || verifier.trim() === "") { verifier = "Не указан"; }
             if (!position || !name || !creator || !minPercent) { alert("Заполните Позицию, Название, Создателя и Процент!"); return; }
 
             const body = { position: parseInt(position), name, creator, verifier, minPercent, id: selectedId };
             try {
-                const url = selectedId !== null ? `/api/demons/update` : `/api/demons/add`;
+                // ИСПРАВЛЕНО: Убран лишний начальный слэш из относительного урла Vercel
+                const url = selectedId !== null ? `api/demons/update` : `api/demons/add`;
                 const res = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
@@ -280,7 +282,7 @@
             if (selectedId === null || !confirm("Вы уверены?")) return;
             const adminCode = document.getElementById('form-admin-code').value;
             try {
-                const res = await fetch('/api/demons/delete', { 
+                const res = await fetch('api/demons/delete', { 
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
                     body: JSON.stringify({ id: selectedId })
@@ -298,7 +300,7 @@
             if (!nInput.value || !pInput.value || !vInput.value || selectedId === null) { alert("Заполните все поля рекорда!"); return; }
             
             try {
-                const res = await fetch('/api/demons/add-victor', {
+                const res = await fetch('api/demons/add-victor', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
                     body: JSON.stringify({ id: selectedId, name: nInput.value, percent: parseInt(pInput.value), video: vInput.value })
