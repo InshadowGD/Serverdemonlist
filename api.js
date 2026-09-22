@@ -1,6 +1,26 @@
-import { kv } from '@vercel/kv';
-
 export const config = { runtime: 'edge' };
+
+// Автоматически подтягиваем секретные интернет-ключи твоей базы данных из панели Vercel Storage
+const KV_URL = process.env.KV_REST_API_URL;
+const KV_TOKEN = process.env.KV_REST_API_TOKEN;
+
+async function redisRequest(command, args = []) {
+    if (!KV_URL || !KV_TOKEN) return null;
+    try {
+        const response = await fetch(`${KV_URL}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${KV_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify([command, ...args])
+        });
+        const resData = await response.json();
+        return resData ? resData.result : null;
+    } catch (e) {
+        return null;
+    }
+}
 
 export default async function handler(req) {
     const corsHeaders = {
@@ -14,7 +34,8 @@ export default async function handler(req) {
 
     try {
         if (req.method === 'GET') {
-            const demons = await kv.get('demons_v3') || [];
+            const rawData = await redisRequest('GET', ['demons_v3']);
+            const demons = rawData ? (typeof rawData === 'string' ? JSON.parse(rawData) : rawData) : [];
             return new Response(JSON.stringify(demons), { headers: corsHeaders });
         }
 
@@ -24,7 +45,8 @@ export default async function handler(req) {
             }
 
             const body = await req.json();
-            let demons = await kv.get('demons_v3') || [];
+            const rawData = await redisRequest('GET', ['demons_v3']);
+            let demons = rawData ? (typeof rawData === 'string' ? JSON.parse(rawData) : rawData) : [];
 
             if (req.url.endsWith('/delete')) {
                 demons = demons.filter(d => d.id !== body.id);
@@ -50,7 +72,7 @@ export default async function handler(req) {
             }
 
             demons.sort((a, b) => a.position - b.position);
-            await kv.set('demons_v3', demons);
+            await redisRequest('SET', ['demons_v3', JSON.stringify(demons)]);
             return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
         }
     } catch (e) {

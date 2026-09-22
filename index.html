@@ -90,7 +90,6 @@
         async function loadDemons() {
             const list = document.getElementById('demons-list');
             try {
-                // Вызываем нашу нативную Edge функцию без CORS блокировок
                 const response = await fetch('/api/api?t=' + Date.now());
                 const data = await response.json();
                 
@@ -161,13 +160,14 @@
             if (res.ok) { alert("Успешно сохранено!"); createNewDemonFields(); loadDemons(); } else { alert("Ошибка сохранения."); }
         }
 
+        // САМ ИСПРАВИЛ ТУТ ШАГ 2: Теперь пути ведут на точный нативный роут без лишних подстрок
         function saveDemonChanges() {
             if (!checkAdmin()) return;
             const p = document.getElementById('form-position').value; const n = document.getElementById('form-name').value;
             const c = document.getElementById('form-creator').value; const v = document.getElementById('form-verifier').value || 'Не указан';
             const m = document.getElementById('form-min-percent').value;
             if (!p || !n || !c || !m) { alert("Заполните поля!"); return; }
-            sendPost(selectedId ? '/api/api/update' : '/api/api/add', { position: p, name: n, creator: c, verifier: v, minPercent: m, id: selectedId });
+            sendPost(selectedId ? '/api/api/update' : '/api/api', { position: p, name: n, creator: c, verifier: v, minPercent: m, id: selectedId });
         }
 
         function deleteDemon() { if (!checkAdmin() || !confirm("Вы уверены?")) return; sendPost('/api/api/delete', { id: selectedId }); }
