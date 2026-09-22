@@ -46,7 +46,7 @@
                 <div class="form-group"><label>Позиция в топе</label><input type="number" id="form-position"></div>
                 <div class="form-group"><label>Название демона</label><input type="text" id="form-name"></div>
                 <div class="form-group"><label>Создатель</label><input type="text" id="form-creator"></div>
-                <div class="form-group"><label>Верификатор</label><input type="text" id="form-verifier"></div>
+                <div class="form-group"><label>Верификатор (необязательно)</label><input type="text" id="form-verifier"></div>
                 <div class="form-group"><label style="color: #ffb84d;">📉 Минимальный процент листа (%)</label><input type="number" id="form-min-percent" value="100" min="0" max="100"></div>
                 
                 <div class="form-group" style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.1);">
@@ -130,7 +130,7 @@
                     newHtml += `<div class="demon-card-wrapper ${isSelected ? 'active' : ''}" style="border-left-color: ${posColor}">
                         <div onclick='selectDemon(${JSON.stringify(d)})'>
                             <h3><span style="color: ${posColor}">#${d.position}</span> - ${d.name}</h3>
-                            <p>Создатель: <span style="color:#fff">${d.creator}</span> | Мин. процент: <span style="color:#ffb84d">${d.minPercent || 100}%</span></p>
+                            <p>Создатель: <span style="color:#fff">${d.creator}</span> | Верификатор: <span style="color:#fff">${d.verifier || 'Не указан'}</span> | Мин. процент: <span style="color:#ffb84d">${d.minPercent || 100}%</span></p>
                         </div>
                     `;
 
@@ -223,9 +223,11 @@
             const position = document.getElementById('form-position').value;
             const name = document.getElementById('form-name').value;
             const creator = document.getElementById('form-creator').value;
-            const verifier = document.getElementById('form-verifier').value;
+            const verifier = document.getElementById('form-verifier').value || 'Не указан'; // Авто-заполнение пустого поля
             const minPercent = document.getElementById('form-min-percent').value;
-            if (!position || !name || !creator || !verifier || !minPercent) { alert("Заполните все поля!"); return; }
+            
+            // Проверяем только самые важные поля
+            if (!position || !name || !creator || !minPercent) { alert("Заполните Позицию, Название и Создателя!"); return; }
 
             const body = { position: parseInt(position), name, creator, verifier, minPercent, id: selectedId };
             try {
@@ -235,7 +237,7 @@
                     headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
                     body: JSON.stringify(body)
                 });
-                if (res.ok) { alert("Сохранено!"); createNewDemonFields(); }
+                if (res.ok) { alert("Уровень сохранен!"); createNewDemonFields(); }
             } catch (e) { alert("Ошибка сохранения."); }
         }
 
