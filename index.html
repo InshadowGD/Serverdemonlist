@@ -36,7 +36,7 @@
                 
                 <div class="form-group" style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #2d3039;">
                     <label style="color: #ffb84d; font-weight: bold;">🔑 Код администратора</label>
-                    <input type="password" id="form-admin-code" placeholder="Введите ваш секретный код">
+                    <input type="password" id="form-admin-code" placeholder="Введите ваш секретного код">
                 </div>
 
                 <button onclick="saveDemonChanges()" style="background:#ff4a4a; color:#fff;">Сохранить уровень</button>
@@ -55,31 +55,32 @@
     </div>
 
     <script>
+        const SECRET_ADMIN_CODE = '090909';
         let selectedPos = null;
-        let selectedName = null;
 
-        // Увеличили интервал до 6000мс (6 секунд), чтобы база данных успевала обновиться
         window.onload = function() { 
             loadDemons(); 
-            setInterval(loadDemons, 6000); 
         };
+
+        function checkAdmin() {
+            const inputCode = document.getElementById('form-admin-code').value;
+            if (inputCode !== SECRET_ADMIN_CODE) {
+                alert("Ошибка: Неверный код администратора!");
+                return false;
+            }
+            return true;
+        }
         async function loadDemons() {
             const list = document.getElementById('demons-list');
             try {
                 const response = await fetch('/api/demons');
                 const data = await response.json();
-                
-                // Если мы прямо сейчас что-то удалили вручную, игнорируем старый кэш сервера
-                if (selectedPos === null && data.length > 0 && list.innerHTML === '') {
-                    return; 
-                }
-                
                 list.innerHTML = ''; 
                 if (data.length === 0) { list.innerHTML = 'Лист пуст.'; return; }
                 
                 data.sort((a, b) => a.position - b.position);
                 data.forEach(d => {
-                    const isSelected = (selectedPos === parseInt(d.position) && selectedName === d.name);
+                    const isSelected = selectedPos === parseInt(d.position);
                     const wrapper = document.createElement('div');
                     wrapper.className = `demon-card-wrapper ${isSelected ? 'active' : ''}`;
                     
@@ -105,7 +106,6 @@
 
         function selectDemon(demon) {
             selectedPos = parseInt(demon.position);
-            selectedName = demon.name;
             document.getElementById('form-title').innerText = "Редактировать уровень";
             document.getElementById('form-position').value = demon.position;
             document.getElementById('form-name').value = demon.name;
@@ -121,7 +121,6 @@
 
         function createNewDemonFields() {
             selectedPos = null;
-            selectedName = null;
             document.getElementById('form-title').innerText = "Добавить уровень";
             clearFormInputOnly();
             document.getElementById('btn-delete-demon').style.display = 'none';
@@ -136,10 +135,12 @@
             document.getElementById('form-name').value = '';
             document.getElementById('form-creator').value = '';
             document.getElementById('form-verifier').value = '';
+            document.getElementById('form-admin-code').value = '';
         }
 
         async function saveDemonChanges() {
-            const adminCode = document.getElementById('form-admin-code').value;
+            if (!checkAdmin()) return;
+
             const position = document.getElementById('form-position').value;
             const name = document.getElementById('form-name').value;
             const creator = document.getElementById('form-creator').value;
@@ -148,66 +149,39 @@
 
             const body = { position: parseInt(position), name, creator, verifier };
             try {
-                if (selectedPos !== null && (selectedPos !== body.position || selectedName !== body.name)) {
-                    await fetch(`/api/demons/delete/${selectedPos}`, { 
-                        method: 'POST', 
-                        headers: { 'x-admin-code': adminCode } 
-                    });
+                if (selectedPos !== null && selectedPos !== body.position) {
+                    await fetch(`/api/demons/delete/${selectedPos}`, { method: 'POST' });
                 }
                 const url = selectedPos !== null ? `/api/demons/update` : `/api/demons/add`;
                 const res = await fetch(url, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
                 });
-                if (res.ok) { 
-                    alert("Уровень успешно сохранен!"); 
-                    createNewDemonFields(); 
-                }
-                else { alert("Ошибка: Неверный код администратора!"); }
+                if (res.ok) { alert("Уровень успешно сохранен!"); createNewDemonFields(); }
             } catch (e) { alert("Ошибка сохранения."); }
         }
 
         async function deleteDemon() {
-            const adminCode = document.getElementById('form-admin-code').value;
-            if (selectedPos === null || !confirm("Вы уверены, что хотите НАВСЕГДА удалить уровень #" + selectedPos + "?")) return;
+            if (!checkAdmin()) return;
+            if (selectedPos === null || !confirm("Вы уверены, что хотите удалить уровень?")) return;
             try {
-                // Мгновенно очищаем экран локально, чтобы убрать моргание
-                document.getElementById('demons-list').innerHTML = ''; 
-                
-                const res = await fetch(`/api/demons/delete/${selectedPos}`, { 
-                    method: 'POST',
-                    headers: { 'x-admin-code': adminCode }
-                });
-                if (res.ok) { 
-                    alert("Уровень успешно удален!"); 
-                    createNewDemonFields(); 
-                }
-                else { 
-                    alert("Ошибка: Неверный код администратора!"); 
-                    loadDemons(); // Возвращаем список назад, если пароль не подошел
-                }
-            } catch (e) { alert("Ошибка удаления."); loadDemons(); }
+                const res = await fetch(`/api/demons/delete/${selectedPos}`, { method: 'POST' });
+                if (res.ok) { alert("Уровень успешно удален!"); createNewDemonFields(); }
+            } catch (e) { alert("Ошибка удаления."); }
         }
 
         async function addVictor() {
-            const adminCode = document.getElementById('form-admin-code').value;
             const nInput = document.getElementById('victor-name');
             const vInput = document.getElementById('victor-video');
-            if (!nInput.value || !vInput.value || selectedPos === null) { alert("Выберите уровень и заполните поля рекорда!"); return; }
+            if (!nInput.value || !vInput.value || selectedPos === null) { alert("Заполните поля рекорда!"); return; }
             try {
                 const res = await fetch(`/api/demons/${selectedPos}/victor`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name: nInput.value, video: vInput.value })
                 });
-                if (res.ok) { 
-                    alert("Рекорд записан!"); 
-                    nInput.value = ''; 
-                    vInput.value = ''; 
-                    loadDemons(); 
-                }
-                else { alert("Ошибка: Неверный код администратора для записи рекорда!"); }
+                if (res.ok) { alert("Рекорд записан!"); nInput.value = ''; vInput.value = ''; loadDemons(); }
             } catch (e) { console.error(e); }
         }
     </script>
