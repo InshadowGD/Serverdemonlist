@@ -57,6 +57,7 @@
     <script>
         const SECRET_ADMIN_CODE = '090909';
         let selectedPos = null;
+        let selectedName = null; // Переменная для отслеживания имени уровня
 
         window.onload = function() { 
             loadDemons(); 
@@ -80,7 +81,8 @@
                 
                 data.sort((a, b) => a.position - b.position);
                 data.forEach(d => {
-                    const isSelected = selectedPos === parseInt(d.position);
+                    // Теперь проверяем совпадение и по позиции, и по названию уровня
+                    const isSelected = (selectedPos === parseInt(d.position) && selectedName === d.name);
                     const wrapper = document.createElement('div');
                     wrapper.className = `demon-card-wrapper ${isSelected ? 'active' : ''}`;
                     
@@ -106,6 +108,7 @@
 
         function selectDemon(demon) {
             selectedPos = parseInt(demon.position);
+            selectedName = demon.name; // Запоминаем название при клике
             document.getElementById('form-title').innerText = "Редактировать уровень";
             document.getElementById('form-position').value = demon.position;
             document.getElementById('form-name').value = demon.name;
@@ -121,6 +124,7 @@
 
         function createNewDemonFields() {
             selectedPos = null;
+            selectedName = null; // Сбрасываем название
             document.getElementById('form-title').innerText = "Добавить уровень";
             clearFormInputOnly();
             document.getElementById('btn-delete-demon').style.display = 'none';
@@ -172,7 +176,6 @@
         }
 
         async function addVictor() {
-            // ТЕПЕРЬ ТУТ ТОЖЕ СТОИТ ПРОВЕРКА КОДА АДМИНИСТРАТОРА
             if (!checkAdmin()) return;
 
             const nInput = document.getElementById('victor-name');
