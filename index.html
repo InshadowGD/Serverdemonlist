@@ -70,7 +70,7 @@
     <div class="container">
         <div class="main-content">
             <h1>Server Demonlist</h1>
-            <div id="demons-list">Синхронизация с базой Redis...</div>
+            <div id="demons-list">Подключение к глобальной базе данных...</div>
         </div>
 
         <div class="sidebar">
@@ -112,12 +112,13 @@
         const SECRET_ADMIN_CODE = '090909';
         let selectedId = null;
 
-        // ЖЕСТКО ЗАДАЕМ АБСОЛЮТНЫЙ АДРЕС САЙТА ДЛЯ ИСКЛЮЧЕНИЯ ЛЮБЫХ СБОЕВ СЕТИ VERCEL
-        const SITE_URL = "https://vercel.app";
+        // ВЫДЕЛЕННЫЙ МЕЖДУНАРОДНЫЙ СКЛАД JSONBIN (ПОЛНОСТЬЮ АВТОНОМНЫЙ)
+        const CLOUD_URL = "https://jsonbin.io";
+        const CLOUD_KEY = "$2a$10$89M0v.N7Y7wL0h/xM60Mze7vN9tB/5y/mC8Sly23nIeQ59L5L/hKW";
 
         window.onload = function() { 
             loadDemons(); 
-            setInterval(loadDemons, 2000); 
+            setInterval(loadDemons, 3000); 
         };
 
         function checkAdmin() {
@@ -140,12 +141,34 @@
             }
         }
 
+        async function fetchGlobalCloud() {
+            try {
+                const res = await fetch(`${CLOUD_URL}/latest`, {
+                    headers: { 'X-Master-Key': CLOUD_KEY }
+                });
+                const resData = await res.json();
+                return resData && resData.record ? resData.record : [];
+            } catch (e) { return []; }
+        }
+
+        async function saveGlobalCloud(newData) {
+            try {
+                const res = await fetch(CLOUD_URL, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Master-Key': CLOUD_KEY
+                    },
+                    body: JSON.stringify(newData)
+                });
+                return res.ok;
+            } catch (e) { return false; }
+        }
+
         async function loadDemons() {
             const list = document.getElementById('demons-list');
             try {
-                // ИСПРАВЛЕНО: Теперь запрос летит по абсолютному прямому интернет-пути
-                const response = await fetch(`${SITE_URL}/api/demons?t=` + Date.now());
-                const data = await response.json();
+                const data = await fetchGlobalCloud();
                 
                 if (!data || data.length === 0) { 
                     list.innerHTML = 'Лист пуст.'; 
@@ -189,7 +212,7 @@
 
                 if (list.innerHTML !== newHtml) { list.innerHTML = newHtml; }
                 renderLeaderboard(playerScores);
-            } catch (e) { list.innerHTML = 'Лист пуст.'; }
+            } catch (e) { list.innerHTML = 'Ошибка загрузки данных.'; }
         }
         function renderLeaderboard(scores) {
             const board = document.getElementById('leaderboard-content');
@@ -256,7 +279,6 @@
 
         async function saveDemonChanges() {
             if (!checkAdmin()) return;
-            const adminCode = document.getElementById('form-admin-code').value;
             const position = document.getElementById('form-position').value;
             const name = document.getElementById('form-name').value;
             const creator = document.getElementById('form-creator').value;
@@ -266,49 +288,67 @@
             if (!verifier || verifier.trim() === "") { verifier = "Не указан"; }
             if (!position || !name || !creator || !minPercent) { alert("Заполните Позицию, Название, Создателя и Процент!"); return; }
 
-            const body = { position: parseInt(position), name, creator, verifier, minPercent, id: selectedId };
-            try {
-                // ИСПРАВЛЕНО: Теперь отправка идет по абсолютному прямому интернет-пути
-                const url = selectedId !== null ? `${SITE_URL}/api/demons/update` : `${SITE_URL}/api/demons/add`;
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
-                    body: JSON.stringify(body)
+            let demons = await fetchGlobalCloud();
+
+            if (selectedId !== null) {
+                const demon = demons.find(d => d.id === selectedId);
+                if (demon) {
+                    demon.position = parseInt(position);
+                    demon.name = name;
+                    demon.creator = creator;
+                    demon.verifier = verifier;
+                    demon.minPercent = parseInt(minPercent);
+                }
+            } else {
+                demons.push({
+                    id: "id_" + Date.now(),
+                    position: parseInt(position),
+                    name: name,
+                    creator: creator,
+                    verifier: verifier,
+                    minPercent: parseInt(minPercent),
+                    victors: []
                 });
-                if (res.ok) { alert("Уровень успешно сохранен в облако Redis!"); createNewDemonFields(); loadDemons(); }
-            } catch (e) { alert("Ошибка сохранения."); }
+            }
+
+            const success = await saveGlobalCloud(demons);
+            if (success) { alert("Уровень успешно сохранен в интернет-облако!"); createNewDemonFields(); loadDemons(); }
+            else { alert("Ошибка соединения."); }
         }
 
         async function deleteDemon() {
             if (!checkAdmin()) return;
             if (selectedId === null || !confirm("Вы уверены?")) return;
-            const adminCode = document.getElementById('form-admin-code').value;
-            try {
-                const res = await fetch(`${SITE_URL}/api/demons/delete`, { 
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
-                    body: JSON.stringify({ id: selectedId })
-                });
-                if (res.ok) { alert("Удалено для всех!"); createNewDemonFields(); loadDemons(); }
-            } catch (e) { alert("Ошибка удаления."); }
+            
+            let demons = await fetchGlobalCloud();
+            demons = demons.filter(d => d.id !== selectedId);
+            
+            const success = await saveGlobalCloud(demons);
+            if (success) { alert("Удалено!"); createNewDemonFields(); loadDemons(); }
+            else { alert("Ошибка удаления."); }
         }
 
         async function addVictor() {
             if (!checkAdmin()) return;
-            const adminCode = document.getElementById('form-admin-code').value;
             const nInput = document.getElementById('victor-name');
             const pInput = document.getElementById('victor-percent');
             const vInput = document.getElementById('victor-video');
             if (!nInput.value || !pInput.value || !vInput.value || selectedId === null) { alert("Заполните все поля рекорда!"); return; }
             
-            try {
-                const res = await fetch(`${SITE_URL}/api/demons/add-victor`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
-                    body: JSON.stringify({ id: selectedId, name: nInput.value, percent: parseInt(pInput.value), video: vInput.value })
-                });
-                if (res.ok) { alert("Рекорд записан для всех!"); nInput.value = ''; pInput.value = '100'; vInput.value = ''; loadDemons(); }
-            } catch (e) { console.error(e); }
+            let demons = await fetchGlobalCloud();
+            const demon = demons.find(d => d.id === selectedId);
+            if (demon) {
+                if (parseInt(pInput.value) < demon.minPercent) {
+                    alert(`Ошибка: Процент меньше лимита листа (${demon.minPercent}%)!`);
+                    return;
+                }
+                if (!demon.victors) demon.victors = [];
+                demon.victors.push({ name: nInput.value, percent: parseInt(pInput.value), video: vInput.value });
+                
+                const success = await saveGlobalCloud(demons);
+                if (success) { alert("Рекорд записан в облако!"); nInput.value = ''; pInput.value = '100'; vInput.value = ''; loadDemons(); }
+                else { alert("Ошибка записи рекорда."); }
+            }
         }
     </script>
 </body>
