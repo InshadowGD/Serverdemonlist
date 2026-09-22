@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { kv } = require('@vercel/kv'); // Нативный драйвер Redis
+const { kv } = require('@vercel/kv'); // Нативный клиент Redis от Vercel
 const app = express();
 
 app.use(cors());
@@ -10,24 +10,34 @@ const SECRET_ADMIN_CODE = '090909';
 
 async function readDB() {
     try {
-        const demons = await kv.get('demons');
-        return Array.isArray(demons) ? demons : [];
-    } catch (e) { 
-        return []; 
+        // Читаем данные как строку, чтобы избежать багов с типами JSON
+        const rawData = await kv.get('demons_v2');
+        if (!rawData) {
+            // Если база пустая — создаём стартовый массив
+            const startData = [{ id: "id_default", position: 1, name: "Acheron", creator: "Riot", verifier: "Riot", minPercent: 100, victors: [] }];
+            await kv.set('demons_v2', JSON.stringify(startData));
+            return startData;
+        }
+        return typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+    } catch (e) {
+        console.error("Ошибка чтения Redis:", e);
+        return [];
     }
 }
 
 async function writeDB(data) {
-    try { 
-        await kv.set('demons', data); 
-    } catch (e) {}
+    try {
+        // Принудительно превращаем массив в строку перед записью в облако
+        await kv.set('demons_v2', JSON.stringify(data));
+    } catch (e) {
+        console.error("Ошибка записи Redis:", e);
+    }
 }
 
 function isNotAdmin(req) {
     return req.headers['x-admin-code'] !== SECRET_ADMIN_CODE;
 }
 
-// ЖЕСТКОЕ ОТКЛЮЧЕНИЕ КЭША НА СЕРВЕРЕ
 app.get('/api/demons', async (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
@@ -44,6 +54,9 @@ app.post('/api/demons/add', async (req, res) => {
     if (!position || !name || !creator || !minPercent) return res.status(400).json({ success: false });
     
     let demons = await readDB();
+    // Фильтруем стартовый Ачерон, если добавляется первый реальный уровень
+    demons = demons.filter(d => d.id !== 'id_default');
+    
     demons.push({
         id: "id_" + Date.now(),
         position: parseInt(position),
