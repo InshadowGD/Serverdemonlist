@@ -65,7 +65,31 @@
         .victors-list { margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.08); }
         .victors-list strong { color: #ffb84d; display: block; margin-bottom: 8px; font-size: 0.9rem; text-transform: uppercase; }
         .victor-item { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px; margin: 6px 0; }
-        .victor-item a { color: #4af3ff; text-decoration: none; font-weight: 600; }
+        
+        /* ИСПРАВЛЕНО: Новый прокачанный дизайн кнопки видео-доказательства */
+        .video-btn { 
+            color: #4af3ff; 
+            text-decoration: none; 
+            font-weight: 700; 
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 6px 12px;
+            background: rgba(74, 243, 255, 0.05);
+            border: 1px solid rgba(74, 243, 255, 0.2);
+            border-radius: 6px;
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .video-btn:hover { 
+            color: #fff; 
+            background: rgba(74, 243, 255, 0.25);
+            border-color: #4af3ff;
+            box-shadow: 0 0 12px rgba(74, 243, 255, 0.4);
+            transform: scale(1.03);
+        }
         
         .leaderboard-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .leaderboard-table th { text-align: left; padding: 8px; color: #8a8d98; font-size: 0.8rem; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.05); }
@@ -186,7 +210,11 @@
                     html += `<div class="victors-list"><strong>🏆 Рекорды:</strong>`;
                     d.victors.forEach(v => {
                         let pts = calculatePoints(d.position, v.percent || 100, d.minPercent || 100, data.length);
-                        html += `<div class="victor-item"><span>👤 <b>${v.name}</b> — ${v.percent || 100}% (<span style="color:#00ff66">+${pts} PTS</span>)</span><a href="${v.video}" target="_blank">🎬 Видео</a></div>`;
+                        // ИСПРАВЛЕНО: Теперь тут генерируется ссылка с новым CSS классом video-btn
+                        html += `<div class="victor-item">
+                            <span>👤 <b>${v.name}</b> — ${v.percent || 100}% (<span style="color:#00ff66">+${pts} PTS</span>)</span>
+                            <a href="${v.video}" target="_blank" class="video-btn">▶ Видео</a>
+                        </div>`;
                         
                         if (!playerScores[v.name]) playerScores[v.name] = 0;
                         playerScores[v.name] += pts;
@@ -202,7 +230,6 @@
         function renderLeaderboard(scores) {
             const board = document.getElementById('leaderboard-content');
             
-            // МАГИЯ ТУТ: Добавлен .slice(0, 5) для строгого ограничения Топ-5 игроков
             let sortedPlayers = Object.keys(scores)
                 .map(name => ({ name: name, score: Math.round(scores[name] * 10) / 10 }))
                 .sort((a,b) => b.score - a.score)
