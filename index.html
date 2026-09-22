@@ -56,13 +56,12 @@
 
     <script>
         const SECRET_ADMIN_CODE = '090909';
-        let selectedId = null; // Уникальный ID для безошибочного выбора уровня
+        let selectedId = null;
 
         window.onload = function() { 
-            // Инициализация базы данных, если она пустая
-            if (!localStorage.getItem('local_demons')) {
+            if (!localStorage.getItem('local_db_v3')) {
                 const startData = [{ id: "id_1", position: 1, name: "Acheron", creator: "Riot", verifier: "Riot", victors: [] }];
-                localStorage.setItem('local_demons', JSON.stringify(startData));
+                localStorage.setItem('local_db_v3', JSON.stringify(startData));
             }
             loadDemons(); 
         };
@@ -79,7 +78,7 @@
             const list = document.getElementById('demons-list');
             list.innerHTML = '';
             
-            const data = JSON.parse(localStorage.getItem('local_demons') || '[]');
+            const data = JSON.parse(localStorage.getItem('local_db_v3') || '[]');
             if (data.length === 0) { list.innerHTML = 'Лист пуст.'; return; }
             
             data.sort((a, b) => a.position - b.position);
@@ -150,10 +149,9 @@
             const verifier = document.getElementById('form-verifier').value;
             if (!position || !name || !creator || !verifier) { alert("Заполните все поля!"); return; }
 
-            let demons = JSON.parse(localStorage.getItem('local_demons') || '[]');
+            let demons = JSON.parse(localStorage.getItem('local_db_v3') || '[]');
 
             if (selectedId !== null) {
-                // Редактирование существующего
                 const demon = demons.find(d => d.id === selectedId);
                 if (demon) {
                     demon.position = parseInt(position);
@@ -162,7 +160,6 @@
                     demon.verifier = verifier;
                 }
             } else {
-                // Создание нового
                 const newDemon = {
                     id: "id_" + Date.now(),
                     position: parseInt(position),
@@ -174,7 +171,7 @@
                 demons.push(newDemon);
             }
 
-            localStorage.setItem('local_demons', JSON.stringify(demons));
+            localStorage.setItem('local_db_v3', JSON.stringify(demons));
             alert("Уровень успешно сохранен!");
             createNewDemonFields();
         }
@@ -183,10 +180,10 @@
             if (!checkAdmin()) return;
             if (selectedId === null || !confirm("Вы уверены, что хотите НАВСЕГДА удалить уровень?")) return;
             
-            let demons = JSON.parse(localStorage.getItem('local_demons') || '[]');
+            let demons = JSON.parse(localStorage.getItem('local_db_v3') || '[]');
             demons = demons.filter(d => d.id !== selectedId);
             
-            localStorage.setItem('local_demons', JSON.stringify(demons));
+            localStorage.setItem('local_db_v3', JSON.stringify(demons));
             alert("Уровень успешно удален!");
             createNewDemonFields();
         }
@@ -198,12 +195,12 @@
             const vInput = document.getElementById('victor-video');
             if (!nInput.value || !vInput.value || selectedId === null) { alert("Заполните поля рекорда!"); return; }
             
-            let demons = JSON.parse(localStorage.getItem('local_demons') || '[]');
+            let demons = JSON.parse(localStorage.getItem('local_db_v3') || '[]');
             const demon = demons.find(d => d.id === selectedId);
             if (demon) {
                 if (!demon.victors) demon.victors = [];
                 demon.victors.push({ name: nInput.value, video: vInput.value });
-                localStorage.setItem('local_demons', JSON.stringify(demons));
+                localStorage.setItem('local_db_v3', JSON.stringify(demons));
                 alert("Рекорд записан!");
                 nInput.value = '';
                 vInput.value = '';
