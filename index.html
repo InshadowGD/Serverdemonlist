@@ -116,10 +116,11 @@
         let selectedId = null;
         let globalDemonsList = [];
 
-        // ВЫДЕЛЕННЫЕ КЛЮЧИ ИНТЕРНЕТ-ОБЛАКА SUPABASE ДЛЯ ТВОЕГО САЙТА
+        // ВЫДЕЛЕННЫЕ КЛЮЧИ ИНТЕРНЕТ-ОБЛАКА SUPABASE
         const SUPABASE_URL = "https://supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1bmJpeHNrYmJ5d3VuYml4c2tiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTI4OTAwMDAsImV4cCI6MjAyODg5MDAwMH0.1v8XbV7_N9tB_5y_mC8Sly23nIeQ59L5L_hKW";
         
+        // ИСПРАВЛЕНО: Дали правильное имя переменной, чтобы код больше не падал!
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         window.onload = function() { 
@@ -147,12 +148,10 @@
         }
 
         async function listenRealtimeCloud() {
-            // ИСПРАВЛЕНО: Теперь точное чтение ячейки record_json без синтаксических сбоев!
             const { data } = await _supabase.from('demonlist').select('record_json').eq('id', 1).single();
             globalDemonsList = data && data.record_json ? data.record_json : [];
             renderDOM();
 
-            // Включаем WebSocket-прослушивание живых изменений
             _supabase.channel('schema-db-changes')
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'demonlist' }, payload => {
                     globalDemonsList = payload.new.record_json || [];
