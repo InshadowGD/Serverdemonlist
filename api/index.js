@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { kv } = require('@vercel/kv'); // Подключаем облачное хранилище
+const { kv } = require('@vercel/kv');
 const app = express();
 
 app.use(cors());
@@ -8,7 +8,6 @@ app.use(express.json());
 
 const SECRET_ADMIN_CODE = '090909';
 
-// Чтение данных из вечного облака Vercel KV
 async function readDB() {
     try {
         const demons = await kv.get('demons');
@@ -18,16 +17,11 @@ async function readDB() {
             return startData;
         }
         return demons;
-    } catch (e) {
-        return [];
-    }
+    } catch (e) { return []; }
 }
 
-// Запись данных в облако
 async function writeDB(data) {
-    try {
-        await kv.set('demons', data);
-    } catch (e) {}
+    try { await kv.set('demons', data); } catch (e) {}
 }
 
 function isNotAdmin(req) {
@@ -40,7 +34,7 @@ app.get('/api/demons', async (req, res) => {
 });
 
 app.post('/api/demons/add', async (req, res) => {
-    if (isNotAdmin(req)) return res.status(403).json({ success: false, error: "Неверный код!" });
+    if (isNotAdmin(req)) return res.status(403).json({ success: false, error: "Access Denied" });
     const { position, name, creator, verifier } = req.body;
     if (!position || !name || !creator || !verifier) return res.status(400).json({ success: false });
     
@@ -52,7 +46,7 @@ app.post('/api/demons/add', async (req, res) => {
 });
 
 app.post('/api/demons/update', async (req, res) => {
-    if (isNotAdmin(req)) return res.status(403).json({ success: false, error: "Неверный код!" });
+    if (isNotAdmin(req)) return res.status(403).json({ success: false, error: "Access Denied" });
     const { position, name, creator, verifier } = req.body;
     
     let demons = await readDB();
@@ -70,7 +64,7 @@ app.post('/api/demons/update', async (req, res) => {
 });
 
 app.post('/api/demons/delete/:position', async (req, res) => {
-    if (isNotAdmin(req)) return res.status(403).json({ success: false, error: "Неверный код!" });
+    if (isNotAdmin(req)) return res.status(403).json({ success: false, error: "Access Denied" });
     const pos = parseInt(req.params.position);
     
     let demons = await readDB();
@@ -80,7 +74,7 @@ app.post('/api/demons/delete/:position', async (req, res) => {
 });
 
 app.post('/api/demons/:position/victor', async (req, res) => {
-    if (isNotAdmin(req)) return res.status(403).json({ success: false, error: "Неверный код!" });
+    if (isNotAdmin(req)) return res.status(403).json({ success: false, error: "Access Denied" });
     const pos = parseInt(req.params.position);
     const { name, video } = req.body;
     
