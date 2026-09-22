@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { kv } = require('@vercel/kv'); // Используем официальный нативный клиент Vercel KV
+const { kv } = require('@vercel/kv'); // Подключаем официальный неубиваемый драйвер Redis
 const app = express();
 
 app.use(cors());
@@ -8,30 +8,21 @@ app.use(express.json());
 
 const SECRET_ADMIN_CODE = '090909';
 
-// Безопасное чтение данных напрямую из облачного хранилища Redis
 async function readDB() {
     try {
+        // Читаем данные из нативного облака Redis
         const demons = await kv.get('demons');
-        if (!demons) {
-            // Начальный шаблон, если база абсолютно пустая
-            const startData = [{ id: "id_default", position: 1, name: "Acheron", creator: "Riot", verifier: "Riot", minPercent: 100, victors: [] }];
-            await kv.set('demons', startData);
-            return startData;
-        }
         return Array.isArray(demons) ? demons : [];
-    } catch (e) {
-        console.error("Ошибка чтения KV Redis:", e);
-        return [];
+    } catch (e) { 
+        return []; 
     }
 }
 
-// Безопасная запись данных напрямую в облако Redis
 async function writeDB(data) {
-    try {
-        await kv.set('demons', data);
-    } catch (e) {
-        console.error("Ошибка записи KV Redis:", e);
-    }
+    try { 
+        // Записываем данные в нативное облако Redis
+        await kv.set('demons', data); 
+    } catch (e) {}
 }
 
 function isNotAdmin(req) {
