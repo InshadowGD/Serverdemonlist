@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Server Demonlist</title>
     
-    <!-- ПОДКЛЮЧАЕМ СКРИПТ ЖИВОГО ОБЛАКА SUPABASE -->
+    <!-- ПОДКЛЮЧАЕМ ОФИЦИАЛЬНЫЙ СКРИПТ ЖИВОГО ОБЛАКА SUPABASE -->
     <script src="https://jsdelivr.net"></script>
 
     <style>
@@ -120,7 +120,6 @@
         const SUPABASE_URL = "https://supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1bmJpeHNrYmJ5d3VuYml4c2tiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTI4OTAwMDAsImV4cCI6MjAyODg5MDAwMH0.1v8XbV7_N9tB_5y_mC8Sly23nIeQ59L5L_hKW";
         
-        // ИСПРАВЛЕНО: Дали правильное имя переменной, чтобы код больше не падал!
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         window.onload = function() { 
@@ -262,6 +261,7 @@
                 demon.victors.push({ name: n.value, percent: parseInt(p.value), video: v.value });
                 
                 await _supabase.from('demonlist').update({ record_json: globalDemonsList }).eq('id', 1);
+                // ИСПРАВЛЕНО И САМ ОЧИСТИЛ: Стерли опечатку nInput, теперь поля очистятся без багов!
                 alert("Рекорд записан!"); n.value = ''; p.value = '100'; v.value = '';
             }
         }
