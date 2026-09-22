@@ -21,13 +21,11 @@
 <body>
 
     <div class="container">
-        <!-- СПИСОК ДЕМОНОВ -->
         <div class="main-content">
             <h1>Server Demonlist</h1>
             <div id="demons-list">Загрузка списка...</div>
         </div>
 
-        <!-- ПАНЕЛИ УПРАВЛЕНИЯ -->
         <div class="sidebar">
             <div class="panel">
                 <h2 id="form-title">Добавить уровень</h2>
@@ -50,7 +48,6 @@
     </div>
 
     <script>
-        const API_URL = ''
         let selectedPos = null;
 
         window.onload = function() { loadDemons(); };
@@ -58,7 +55,7 @@
         async function loadDemons() {
             const list = document.getElementById('demons-list');
             try {
-                const response = await fetch(`${API_URL}/api/demons`);
+                const response = await fetch('/api/demons');
                 const data = await response.json();
                 list.innerHTML = ''; 
                 if (data.length === 0) { list.innerHTML = 'Лист пуст.'; return; }
@@ -125,9 +122,9 @@
             const body = { position: parseInt(position), name, creator, verifier };
             try {
                 if (selectedPos !== null && selectedPos !== body.position) {
-                    await fetch(`${API_URL}/api/demons/delete/${selectedPos}`, { method: 'POST' });
+                    await fetch(`/api/demons/delete/${selectedPos}`, { method: 'POST' });
                 }
-                const url = selectedPos !== null ? `${API_URL}/api/demons/update` : `${API_URL}/api/demons/add`;
+                const url = selectedPos !== null ? `/api/demons/update` : `/api/demons/add`;
                 const res = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -140,7 +137,7 @@
         async function deleteDemon() {
             if (selectedPos === null || !confirm("Удалить уровень?")) return;
             try {
-                const res = await fetch(`${API_URL}/api/demons/delete/${selectedPos}`, { method: 'POST' });
+                const res = await fetch(`/api/demons/delete/${selectedPos}`, { method: 'POST' });
                 if (res.ok) { alert("Удалено!"); createNewDemonFields(); }
             } catch (e) { alert("Ошибка."); }
         }
@@ -150,7 +147,7 @@
             const vInput = document.getElementById('victor-video');
             if (!nInput.value || !vInput.value || selectedPos === null) { alert("Заполните поля рекорда!"); return; }
             try {
-                const res = await fetch(`${API_URL}/api/demons/${selectedPos}/victor`, {
+                const res = await fetch(`/api/demons/${selectedPos}/victor`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name: nInput.value, video: vInput.value })
