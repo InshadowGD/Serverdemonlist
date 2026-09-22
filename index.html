@@ -55,23 +55,12 @@
     </div>
 
     <script>
-        const SECRET_ADMIN_CODE = '090909'; 
         let selectedPos = null;
 
-        // Включаем авто-обновление каждые 3000 миллисекунд (3 секунды)
         window.onload = function() { 
             loadDemons(); 
             setInterval(loadDemons, 3000); 
         };
-
-        function checkAdmin() {
-            const inputCode = document.getElementById('form-admin-code').value;
-            if (inputCode !== SECRET_ADMIN_CODE) {
-                alert("Ошибка: Неверный код администратора! Изменения отклонены.");
-                return false;
-            }
-            return true;
-        }
         async function loadDemons() {
             const list = document.getElementById('demons-list');
             try {
@@ -103,9 +92,7 @@
                     wrapper.innerHTML = html;
                     list.appendChild(wrapper);
                 });
-            } catch (e) {
-                list.innerHTML = 'Нет связи с сервером.';
-            }
+            } catch (e) { list.innerHTML = 'Нет связи с сервером.'; }
         }
 
         function selectDemon(demon) {
@@ -143,8 +130,7 @@
         }
 
         async function saveDemonChanges() {
-            if (!checkAdmin()) return;
-
+            const adminCode = document.getElementById('form-admin-code').value;
             const position = document.getElementById('form-position').value;
             const name = document.getElementById('form-name').value;
             const creator = document.getElementById('form-creator').value;
@@ -154,31 +140,32 @@
             const body = { position: parseInt(position), name, creator, verifier };
             try {
                 if (selectedPos !== null && selectedPos !== body.position) {
-                    await fetch(`/api/demons/delete/${selectedPos}`, { method: 'POST' });
+                    await fetch(`/api/demons/delete/${selectedPos}`, { 
+                        method: 'POST', 
+                        headers: { 'x-admin-code': adminCode } 
+                    });
                 }
                 const url = selectedPos !== null ? `/api/demons/update` : `/api/demons/add`;
                 const res = await fetch(url, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
                     body: JSON.stringify(body)
                 });
-                if (res.ok) { 
-                    alert("Уровень успешно сохранен!"); 
-                    createNewDemonFields();
-                }
+                if (res.ok) { alert("Уровень успешно сохранен!"); createNewDemonFields(); }
+                else { alert("Ошибка: Неверный код администратора!"); }
             } catch (e) { alert("Ошибка сохранения."); }
         }
 
         async function deleteDemon() {
-            if (!checkAdmin()) return;
+            const adminCode = document.getElementById('form-admin-code').value;
             if (selectedPos === null || !confirm("Вы уверены, что хотите НАВСЕГДА удалить уровень #" + selectedPos + "?")) return;
-            
             try {
-                const res = await fetch(`/api/demons/delete/${selectedPos}`, { method: 'POST' });
-                if (res.ok) { 
-                    alert("Уровень успешно удален!"); 
-                    createNewDemonFields();
-                }
+                const res = await fetch(`/api/demons/delete/${selectedPos}`, { 
+                    method: 'POST',
+                    headers: { 'x-admin-code': adminCode }
+                });
+                if (res.ok) { alert("Уровень успешно удален!"); createNewDemonFields(); }
+                else { alert("Ошибка: Неверный код администратора!"); }
             } catch (e) { alert("Ошибка удаления."); }
         }
 
@@ -192,12 +179,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name: nInput.value, video: vInput.value })
                 });
-                if (res.ok) { 
-                    alert("Рекорд записан!"); 
-                    nInput.value = ''; 
-                    vInput.value = ''; 
-                    loadDemons();
-                }
+                if (res.ok) { alert("Рекорд записан!"); nInput.value = ''; vInput.value = ''; loadDemons(); }
             } catch (e) { console.error(e); }
         }
     </script>
