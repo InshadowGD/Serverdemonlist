@@ -37,7 +37,7 @@
     <div class="container">
         <div class="main-content">
             <h1>Server Demonlist</h1>
-            <div id="demons-list">Загрузка списка из глобального облака...</div>
+            <div id="demons-list">Загрузка списка...</div>
         </div>
 
         <div class="sidebar">
@@ -78,7 +78,6 @@
     <script>
         const SECRET_ADMIN_CODE = '090909';
         
-        // === ГЛОБАЛЬНЫЙ ВЕЧНЫЙ ИНТЕРНЕТ-СКЛАД ДЛЯ ТВОЕГО САЙТА ===
         const CLOUD_URL = "https://jsonbin.io";
         const CLOUD_KEY = "$2a$10$89M0v.N7Y7wL0h/xM60Mze7vN9tB/5y/mC8Sly23nIeQ59L5L/hKW";
 
@@ -86,7 +85,7 @@
 
         window.onload = function() { 
             loadDemons(); 
-            setInterval(loadDemons, 2500); // Ежесекундное авто-обновление топа у ВСЕХ людей на Земле
+            setInterval(loadDemons, 2500); 
         };
 
         function checkAdmin() {
@@ -115,7 +114,8 @@
                     headers: { 'X-Master-Key': CLOUD_KEY }
                 });
                 const resData = await res.json();
-                return resData.record || [];
+                // ИСПРАВЛЕНО: Теперь жестко вытаскиваем массив record из ответа сервера
+                return resData && resData.record ? resData.record : [];
             } catch (e) { return []; }
         }
 
@@ -132,6 +132,7 @@
                 return res.ok;
             } catch (e) { return false; }
         }
+
         async function loadDemons() {
             const list = document.getElementById('demons-list');
             try {
@@ -181,7 +182,6 @@
                 renderLeaderboard(playerScores);
             } catch (e) { list.innerHTML = 'Нет связи с облачным хранилищем.'; }
         }
-
         function renderLeaderboard(scores) {
             const board = document.getElementById('leaderboard-content');
             let sortedPlayers = Object.keys(scores)
@@ -210,6 +210,7 @@
             html += `</table>`;
             if (board.innerHTML !== html) { board.innerHTML = html; }
         }
+
         function selectDemon(demon) {
             selectedId = demon.id;
             document.getElementById('form-title').innerText = "Редактировать уровень";
@@ -246,12 +247,13 @@
 
         async function saveDemonChanges() {
             if (!checkAdmin()) return;
+            const adminCode = document.getElementById('form-admin-code').value;
             const position = document.getElementById('form-position').value;
             const name = document.getElementById('form-name').value;
             const creator = document.getElementById('form-creator').value;
-            let verifier = document.getElementById('form-verifier').value;
             const minPercent = document.getElementById('form-min-percent').value;
             
+            let verifier = document.getElementById('form-verifier').value;
             if (!verifier || verifier.trim() === "") { verifier = "Не указан"; }
             if (!position || !name || !creator || !minPercent) { alert("Заполните Позицию, Название и Создателя!"); return; }
 
@@ -279,7 +281,7 @@
             }
 
             const success = await saveGlobalCloud(demons);
-            if (success) { alert("Уровень успешно сохранен в интернет-облако!"); createNewDemonFields(); loadDemons(); }
+            if (success) { alert("Уровень успешно сохранен в глобальное облако!"); createNewDemonFields(); loadDemons(); }
             else { alert("Ошибка соединения с облаком."); }
         }
 
