@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const { kv } = require('@vercel/kv');
 const app = express();
 
 app.use(cors());
@@ -8,27 +7,43 @@ app.use(express.json());
 
 const SECRET_ADMIN_CODE = '090909';
 
+// Подключаем переменные окружения Vercel напрямую для связи с Redis
+const KV_URL = process.env.KV_REST_API_URL;
+const KV_TOKEN = process.env.KV_REST_API_TOKEN;
+
 async function readDB() {
+    if (!KV_URL || !KV_TOKEN) return [];
     try {
-        const demons = await kv.get('demons');
-        if (!demons) {
-            const startData = [{ position: 1, name: "Acheron", creator: "Riot", verifier: "Riot", victors: [] }];
-            await kv.set('demons', startData);
-            return startData;
+        const response = await fetch(`${KV_URL}/get/demons`, {
+            headers: { Authorization: `Bearer ${KV_TOKEN}` }
+        });
+        const result = await response.json();
+        if (result && result.result) {
+            return typeof result.result === 'string' ? JSON.parse(result.result) : result.result;
         }
-        return demons;
+        
+        // Начальный уровень, если база пустая
+        const startData = [{ position: 1, name: "Acheron", creator: "Riot", verifier: "Riot", victors: [] }];
+        await writeDB(startData);
+        return startData;
     } catch (e) { return []; }
 }
 
 async function writeDB(data) {
-    try { await kv.set('demons', data); } catch (e) {}
+    if (!KV_URL || !KV_TOKEN) return;
+    try {
+        await fetch(`${KV_URL}/set/demons`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${KV_TOKEN}` },
+            body: JSON.stringify(data)
+        });
+    } catch (e) {}
 }
 
 function isNotAdmin(req) {
     return req.headers['x-admin-code'] !== SECRET_ADMIN_CODE;
 }
 
-// ГЛАВНЫЙ ЗАПРОС СПИСКА: Полностью блокируем CDN-кэширование хостинга
 app.get('/api/demons', async (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
