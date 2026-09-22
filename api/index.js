@@ -56,19 +56,21 @@ app.post('/api/demons/update', (req, res) => {
     res.json({ success: true });
 });
 
-app.post('/api/demons/delete/:position', (req, res) => {
-    const pos = parseInt(req.params.position);
+// НОВЫЙ ЧИСТЫЙ МАРШРУТ УДАЛЕНИЯ БЕЗ ПАРАМЕТРОВ В ССЫЛКЕ
+app.post('/api/demons/delete', (req, res) => {
+    const { position } = req.body; // Получаем позицию прямо из тела запроса
+    if (!position) return res.status(400).json({ success: false });
+    
     let demons = readDB();
-    demons = demons.filter(d => d.position !== pos);
+    demons = demons.filter(d => parseInt(d.position) !== parseInt(position));
     writeDB(demons);
     res.json({ success: true });
 });
 
-app.post('/api/demons/:position/victor', (req, res) => {
-    const pos = parseInt(req.params.position);
-    const { name, video } = req.body;
+app.post('/api/demons/add-victor', (req, res) => {
+    const { position, name, video } = req.body;
     let demons = readDB();
-    const demon = demons.find(d => d.position === pos);
+    const demon = demons.find(d => d.position === parseInt(position));
     if (demon) {
         if (!demon.victors) demon.victors = [];
         demon.victors.push({ name, video });

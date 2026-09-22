@@ -57,7 +57,7 @@
     <script>
         const SECRET_ADMIN_CODE = '090909';
         let selectedPos = null;
-        let originalPos = null; // Запоминаем точную позицию уровня в базе
+        let originalPos = null;
 
         window.onload = function() { 
             loadDemons(); 
@@ -107,7 +107,7 @@
 
         function selectDemon(demon) {
             selectedPos = parseInt(demon.position);
-            originalPos = parseInt(demon.position); // Жестко фиксируем позицию
+            originalPos = parseInt(demon.position);
             document.getElementById('form-title').innerText = "Редактировать уровень";
             document.getElementById('form-position').value = demon.position;
             document.getElementById('form-name').value = demon.name;
@@ -153,7 +153,11 @@
             const body = { position: parseInt(position), name, creator, verifier };
             try {
                 if (originalPos !== null && originalPos !== body.position) {
-                    await fetch(`/api/demons/delete/${originalPos}`, { method: 'POST' });
+                    await fetch('/api/demons/delete', { 
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ position: originalPos })
+                    });
                 }
                 const url = originalPos !== null ? `/api/demons/update` : `/api/demons/add`;
                 const res = await fetch(url, {
@@ -169,8 +173,12 @@
             if (!checkAdmin()) return;
             if (originalPos === null || !confirm("Вы уверены, что хотите удалить уровень?")) return;
             try {
-                // Запрос уходит по сохранённому исходному номеру из базы
-                const res = await fetch(`/api/demons/delete/${originalPos}`, { method: 'POST' });
+                // Передаем точную цифру в безопасном теле запроса
+                const res = await fetch('/api/demons/delete', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ position: originalPos })
+                });
                 if (res.ok) { alert("Уровень успешно удален!"); createNewDemonFields(); }
             } catch (e) { alert("Ошибка удаления."); }
         }
@@ -182,10 +190,10 @@
             const vInput = document.getElementById('victor-video');
             if (!nInput.value || !vInput.value || originalPos === null) { alert("Заполните поля рекорда!"); return; }
             try {
-                const res = await fetch(`/api/demons/${originalPos}/victor`, {
+                const res = await fetch('/api/demons/add-victor', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: nInput.value, video: vInput.value })
+                    body: JSON.stringify({ position: originalPos, name: nInput.value, video: vInput.value })
                 });
                 if (res.ok) { alert("Рекорд записан!"); nInput.value = ''; vInput.value = ''; loadDemons(); }
             } catch (e) { console.error(e); }
