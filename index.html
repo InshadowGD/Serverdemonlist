@@ -36,7 +36,7 @@
                 
                 <div class="form-group" style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #2d3039;">
                     <label style="color: #ffb84d; font-weight: bold;">🔑 Код администратора</label>
-                    <input type="password" id="form-admin-code" placeholder="Введите ваш секретного код">
+                    <input type="password" id="form-admin-code" placeholder="Введите ваш секретный код">
                 </div>
 
                 <button onclick="saveDemonChanges()" style="background:#ff4a4a; color:#fff;">Сохранить уровень</button>
@@ -65,7 +65,7 @@
         function checkAdmin() {
             const inputCode = document.getElementById('form-admin-code').value;
             if (inputCode !== SECRET_ADMIN_CODE) {
-                alert("Ошибка: Неверный код администратора!");
+                alert("Ошибка: Неверный код администратора! Действие заблокировано.");
                 return false;
             }
             return true;
@@ -172,6 +172,9 @@
         }
 
         async function addVictor() {
+            // ТЕПЕРЬ ТУТ ТОЖЕ СТОИТ ПРОВЕРКА КОДА АДМИНИСТРАТОРА
+            if (!checkAdmin()) return;
+
             const nInput = document.getElementById('victor-name');
             const vInput = document.getElementById('victor-video');
             if (!nInput.value || !vInput.value || selectedPos === null) { alert("Заполните поля рекорда!"); return; }
