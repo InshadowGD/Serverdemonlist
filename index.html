@@ -58,7 +58,16 @@
         .victors-list { margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 14px; }
         .victors-list strong { color: #ffb84d; display: block; margin-bottom: 8px; font-size: 0.9rem; text-transform: uppercase; }
         .victor-item { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px; margin: 6px 0; }
-        .victor-item a { color: #4af3ff; text-decoration: none; font-weight: 600; }
+        
+        /* Кнопка видео */
+        .video-btn { color: #4af3ff; text-decoration: none; font-weight: 600; }
+        .video-btn:hover { text-shadow: 0 0 8px #4af3ff; color: #fff; }
+
+        /* Стили для таблицы лидеров */
+        .leaderboard-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .leaderboard-table th { text-align: left; padding: 8px; color: #8a8d98; font-size: 0.8rem; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .leaderboard-table td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 0.95rem; }
+        .rank-badge { display: inline-block; width: 22px; height: 24px; text-align: center; line-height: 22px; border-radius: 50%; font-weight: bold; font-size: 0.8rem; }
     </style>
 </head>
 <body>
@@ -76,6 +85,7 @@
                 <div class="form-group"><label>Название</label><input type="text" id="form-name"></div>
                 <div class="form-group"><label>Создатель</label><input type="text" id="form-creator"></div>
                 <div class="form-group"><label>Верификатор</label><input type="text" id="form-verifier"></div>
+                <div class="form-group"><label style="color: #ffb84d;">📉 Минимальный процент листа (%)</label><input type="number" id="form-min-percent" value="100" min="0" max="100"></div>
                 
                 <div class="form-group" style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.1);">
                     <label style="color: #ffb84d; font-weight: bold;">🔑 Код администратора</label>
@@ -91,8 +101,14 @@
             <div class="panel" id="victor-panel" style="display: none;">
                 <h2>Добавить рекорд</h2>
                 <div class="form-group"><label>Игрок (Виктор)</label><input type="text" id="victor-name"></div>
+                <div class="form-group"><label>Набранный процент (%)</label><input type="number" id="victor-percent" value="100" min="0" max="100"></div>
                 <div class="form-group"><label>Видео (YouTube)</label><input type="url" id="victor-video"></div>
                 <button onclick="addVictor()" style="background: linear-gradient(135deg, #00ff66 0%, #00c850 100%); color:#000;">Записать рекорд</button>
+            </div>
+
+            <div class="panel">
+                <h2>🏆 Топ-5 лидеров</h2>
+                <div id="leaderboard-content">Подсчет очков...</div>
             </div>
         </div>
     </div>
@@ -102,12 +118,12 @@
         let selectedId = null;
 
         window.onload = function() { 
-            if (!localStorage.getItem('rollback_db')) {
-                const startData = [{ id: "id_1", position: 1, name: "Acheron", creator: "Riot", verifier: "Riot", victors: [] }];
-                localStorage.setItem('rollback_db', JSON.stringify(startData));
+            if (!localStorage.getItem('final_local_db')) {
+                const startData = [{ id: "id_1", position: 1, name: "Acheron", creator: "Riot", verifier: "Riot", minPercent: 100, victors: [] }];
+                localStorage.setItem('final_local_db', JSON.stringify(startData));
             }
             loadDemons(); 
-            setInterval(loadDemons, 1000); // Быстрое локальное автообновление экрана
+            setInterval(loadDemons, 1000); 
         };
 
         function checkAdmin() {
@@ -118,29 +134,61 @@
             }
             return true;
         }
+        function calculatePoints(position, percent, minPercent, totalDemons) {
+            if (percent < minPercent) return 0;
+            
+            // Максимальный балл за Топ-1 уровень — 250 очков. Дальше плавно падает.
+            let maxPoints = 250 - (position - 1) * (200 / Math.max(totalDemons, 1));
+            if (maxPoints < 10) maxPoints = 10; 
+            
+            if (parseInt(percent) === 100) {
+                return Math.round(maxPoints * 10) / 10;
+            } else {
+                // Формула частичных очков за набранный процент
+                let percentPoints = maxPoints * ((percent - minPercent) / (100 - minPercent)) * 0.6;
+                return Math.round(percentPoints * 10) / 10;
+            }
+        }
+
         function loadDemons() {
             const list = document.getElementById('demons-list');
-            const data = JSON.parse(localStorage.getItem('rollback_db') || '[]');
+            const data = JSON.parse(localStorage.getItem('final_local_db') || '[]');
             
-            if (data.length === 0) { list.innerHTML = 'Лист пуст.'; return; }
+            if (data.length === 0) { 
+                list.innerHTML = 'Лист пуст.'; 
+                document.getElementById('leaderboard-content').innerHTML = 'Нет записанных рекордов.';
+                return; 
+            }
             
             data.sort((a, b) => a.position - b.position);
+            let playerScores = {};
             let newHtml = '';
 
             data.forEach(d => {
                 const isSelected = selectedId === d.id;
+                let posColor = '#ff4a4a';
+                if (d.position === 1) posColor = '#ffd700'; // Золото для Топ-1
+                if (d.position === 2) posColor = '#c0c0c0'; // Серебро для Топ-2
+                if (d.position === 3) posColor = '#cd7f32'; // Бронза для Топ-3
                 
-                newHtml += `<div class="demon-card-wrapper ${isSelected ? 'active' : ''}">
+                newHtml += `<div class="demon-card-wrapper ${isSelected ? 'active' : ''}" style="border-left-color: ${posColor}">
                     <div onclick='selectDemon(${JSON.stringify(d)})'>
-                        <h3>#${d.position} - ${d.name}</h3>
-                        <p>Создатель: <span style="color:#fff">${d.creator}</span> | Верификатор: <span style="color:#fff">${d.verifier || 'Не указан'}</span></p>
+                        <h3><span style="color: ${posColor}">#${d.position}</span> - ${d.name}</h3>
+                        <p>Создатель: <span style="color:#fff">${d.creator}</span> | Верификатор: <span style="color:#fff">${d.verifier || 'Не указан'}</span> | Мин. процент: <span style="color:#ffb84d">${d.minPercent || 100}%</span></p>
                     </div>
                 `;
 
                 if (d.victors && d.victors.length > 0) {
                     newHtml += `<div class="victors-list"><strong>🏆 Победители:</strong>`;
                     d.victors.forEach(v => {
-                        newHtml += `<div class="victor-item"><span>👤 ${v.name}</span><a href="${v.video}" target="_blank" style="color:#4af3ff;">🎬 Видео</a></div>`;
+                        let pts = calculatePoints(d.position, v.percent || 100, d.minPercent || 100, data.length);
+                        newHtml += `<div class="victor-item">
+                            <span>👤 <b>${v.name}</b> — ${v.percent || 100}% (<span style="color:#00ff66">+${pts} PTS</span>)</span>
+                            <a href="${v.video}" target="_blank" class="video-btn">🎬 Видео</a>
+                        </div>`;
+                        
+                        if (!playerScores[v.name]) playerScores[v.name] = 0;
+                        playerScores[v.name] += pts;
                     });
                     newHtml += `</div>`;
                 }
@@ -148,6 +196,35 @@
             });
 
             if (list.innerHTML !== newHtml) { list.innerHTML = newHtml; }
+            renderLeaderboard(playerScores);
+        }
+        function renderLeaderboard(scores) {
+            const board = document.getElementById('leaderboard-content');
+            let sortedPlayers = Object.keys(scores)
+                .map(name => ({ name: name, score: Math.round(scores[name] * 10) / 10 }))
+                .sort((a,b) => b.score - a.score)
+                .slice(0, 5); // Ограничение строго до Топ-5 игроков
+            
+            if (sortedPlayers.length === 0) {
+                board.innerHTML = 'Пока нет записанных рекордов.';
+                return;
+            }
+
+            let html = `<table class="leaderboard-table"><tr><th>Место</th><th>Игрок</th><th>Очки</th></tr>`;
+            sortedPlayers.forEach((p, index) => {
+                let badgeStyle = "background: rgba(255,255,255,0.1); color: #fff;";
+                if (index === 0) badgeStyle = "background: #ffd700; color: #000;";
+                if (index === 1) badgeStyle = "background: #c0c0c0; color: #000;";
+                if (index === 2) badgeStyle = "background: #cd7f32; color: #000;";
+                
+                html += `<tr>
+                    <td><span class="rank-badge" style="${badgeStyle}">${index + 1}</span></td>
+                    <td><b>${p.name}</b></td>
+                    <td style="color: #00ff66; font-weight: bold;">${p.score} PTS</td>
+                </tr>`;
+            });
+            html += `</table>`;
+            if (board.innerHTML !== html) { board.innerHTML = html; }
         }
 
         function selectDemon(demon) {
@@ -157,6 +234,7 @@
             document.getElementById('form-name').value = demon.name;
             document.getElementById('form-creator').value = demon.creator;
             document.getElementById('form-verifier').value = demon.verifier || '';
+            document.getElementById('form-min-percent').value = demon.minPercent || 100;
             
             document.getElementById('btn-delete-demon').style.display = 'block';
             document.getElementById('btn-cancel-edit').style.display = 'block';
@@ -179,6 +257,7 @@
             document.getElementById('form-name').value = '';
             document.getElementById('form-creator').value = '';
             document.getElementById('form-verifier').value = '';
+            document.getElementById('form-min-percent').value = '100';
             document.getElementById('form-admin-code').value = '';
         }
 
@@ -187,11 +266,12 @@
             const position = document.getElementById('form-position').value;
             const name = document.getElementById('form-name').value;
             const creator = document.getElementById('form-creator').value;
-            const verifier = document.getElementById('form-verifier').value;
+            const verifier = document.getElementById('form-verifier').value || 'Не указан';
+            const minPercent = document.getElementById('form-min-percent').value;
             
-            if (!position || !name || !creator || !verifier) { alert("Заполните все поля!"); return; }
+            if (!position || !name || !creator || !minPercent) { alert("Заполните Позицию, Название, Создателя и Процент!"); return; }
 
-            let demons = JSON.parse(localStorage.getItem('rollback_db') || '[]');
+            let demons = JSON.parse(localStorage.getItem('final_local_db') || '[]');
 
             if (selectedId !== null) {
                 const demon = demons.find(d => d.id === selectedId);
@@ -200,6 +280,7 @@
                     demon.name = name;
                     demon.creator = creator;
                     demon.verifier = verifier;
+                    demon.minPercent = parseInt(minPercent);
                 }
             } else {
                 demons.push({
@@ -208,11 +289,12 @@
                     name: name,
                     creator: creator,
                     verifier: verifier,
+                    minPercent: parseInt(minPercent),
                     victors: []
                 });
             }
 
-            localStorage.setItem('rollback_db', JSON.stringify(demons));
+            localStorage.setItem('final_local_db', JSON.stringify(demons));
             alert("Уровень сохранен!");
             createNewDemonFields();
         }
@@ -221,10 +303,10 @@
             if (!checkAdmin()) return;
             if (selectedId === null || !confirm("Вы уверены?")) return;
             
-            let demons = JSON.parse(localStorage.getItem('rollback_db') || '[]');
+            let demons = JSON.parse(localStorage.getItem('final_local_db') || '[]');
             demons = demons.filter(d => d.id !== selectedId);
             
-            localStorage.setItem('rollback_db', JSON.stringify(demons));
+            localStorage.setItem('final_local_db', JSON.stringify(demons));
             alert("Удалено!");
             createNewDemonFields();
         }
@@ -232,17 +314,22 @@
         function addVictor() {
             if (!checkAdmin()) return;
             const nInput = document.getElementById('victor-name');
+            const pInput = document.getElementById('victor-percent');
             const vInput = document.getElementById('victor-video');
-            if (!nInput.value || !vInput.value || selectedId === null) { alert("Заполните поля!"); return; }
+            if (!nInput.value || !pInput.value || !vInput.value || selectedId === null) { alert("Заполните все поля рекорда!"); return; }
             
-            let demons = JSON.parse(localStorage.getItem('rollback_db') || '[]');
+            let demons = JSON.parse(localStorage.getItem('final_local_db') || '[]');
             const demon = demons.find(d => d.id === selectedId);
             if (demon) {
+                if (parseInt(pInput.value) < demon.minPercent) {
+                    alert(`Ошибка: Процент меньше лимита листа (${demon.minPercent}%)!`);
+                    return;
+                }
                 if (!demon.victors) demon.victors = [];
-                demon.victors.push({ name: nInput.value, video: vInput.value });
-                localStorage.setItem('rollback_db', JSON.stringify(demons));
+                demon.victors.push({ name: nInput.value, percent: parseInt(pInput.value), video: vInput.value });
+                localStorage.setItem('final_local_db', JSON.stringify(demons));
                 alert("Рекорд записан!");
-                nInput.value = ''; vInput.value = '';
+                nInput.value = ''; pInput.value = '100'; vInput.value = '';
             }
         }
     </script>
