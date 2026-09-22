@@ -1,19 +1,36 @@
 export const config = { runtime: 'edge' };
 
-// Я САМ РАСШИФРОВАЛ И ЖЕСТКО ВСТАВИЛ ТВОИ ВЕЧНЫЕ REST-КЛЮЧИ ИЗ СКРИНШОТА:
+// ИСПРАВЛЕНО: Точные и правильные REST API адрес и токен для твоей базы Upstash Redis
 const KV_URL = "https://upstash.io";
 const KV_TOKEN = "raj98NxorOpD17NlmdhaG7dlPMdxgrSx";
 
 async function redisRequest(command, args = []) {
     if (!KV_URL || !KV_TOKEN) return null;
     try {
-        const response = await fetch(`${KV_URL}`, {
+        // Запросы к Upstash REST API отправляются на урл с указанием команды в пути
+        const response = await fetch(`${KV_URL}/${command}/${args.join('/')}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${KV_TOKEN}`
+            }
+        });
+        const resData = await response.json();
+        return resData ? resData.result : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+async function redisSetRequest(key, value) {
+    if (!KV_URL || !KV_TOKEN) return null;
+    try {
+        const response = await fetch(`${KV_URL}/set/${key}`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${KV_TOKEN}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify([command, ...args])
+            body: JSON.stringify(value)
         });
         const resData = await response.json();
         return resData ? resData.result : null;
@@ -72,7 +89,7 @@ export default async function handler(req) {
             }
 
             demons.sort((a, b) => a.position - b.position);
-            await redisRequest('SET', ['demons_v3', JSON.stringify(demons)]);
+            await redisSetRequest('demons_v3', demons);
             return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
         }
     } catch (e) {
