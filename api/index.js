@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const https = require('https');
+const { kv } = require('@vercel/kv'); // Используем официальный нативный клиент Vercel KV
 const app = express();
 
 app.use(cors());
@@ -8,52 +8,30 @@ app.use(express.json());
 
 const SECRET_ADMIN_CODE = '090909';
 
-// Ключи подключения к Redis из панели Vercel Storage
-const KV_URL = process.env.KV_REST_API_URL;
-const KV_TOKEN = process.env.KV_REST_API_TOKEN;
-
-// Функция для безопасных и стабильных запросов в облако Redis без использования fetch
-function kvRequest(path, method = 'GET', body = null) {
-    return new Promise((resolve) => {
-        if (!KV_URL || !KV_TOKEN) return resolve(null);
-        
-        const urlStr = path.startsWith('http') ? path : `${KV_URL}${path}`;
-        const url = new URL(urlStr);
-        
-        const options = {
-            method: method,
-            headers: {
-                'Authorization': `Bearer ${KV_TOKEN}`,
-                'Content-Type': 'application/json'
-            }
-        };
-
-        const req = https.request(url, options, (res) => {
-            let data = '';
-            res.on('data', (chunk) => { data += chunk; });
-            res.on('end', () => {
-                try { resolve(JSON.parse(data)); } catch (e) { resolve(null); }
-            });
-        });
-
-        req.on('error', () => { resolve(null); });
-        if (body) req.write(JSON.stringify(body));
-        req.end();
-    });
-}
-
+// Безопасное чтение данных напрямую из облачного хранилища Redis
 async function readDB() {
     try {
-        const result = await kvRequest('/get/demons');
-        if (result && result.result) {
-            return typeof result.result === 'string' ? JSON.parse(result.result) : result.result;
+        const demons = await kv.get('demons');
+        if (!demons) {
+            // Начальный шаблон, если база абсолютно пустая
+            const startData = [{ id: "id_default", position: 1, name: "Acheron", creator: "Riot", verifier: "Riot", minPercent: 100, victors: [] }];
+            await kv.set('demons', startData);
+            return startData;
         }
+        return Array.isArray(demons) ? demons : [];
+    } catch (e) {
+        console.error("Ошибка чтения KV Redis:", e);
         return [];
-    } catch (e) { return []; }
+    }
 }
 
+// Безопасная запись данных напрямую в облако Redis
 async function writeDB(data) {
-    await kvRequest('/set/demons', 'POST', data);
+    try {
+        await kv.set('demons', data);
+    } catch (e) {
+        console.error("Ошибка записи KV Redis:", e);
+    }
 }
 
 function isNotAdmin(req) {
@@ -73,7 +51,7 @@ app.get('/api/demons', async (req, res) => {
 app.post('/api/demons/add', async (req, res) => {
     if (isNotAdmin(req)) return res.status(403).json({ success: false, error: "Access Denied" });
     const { position, name, creator, verifier, minPercent } = req.body;
-    if (!position || !name || !creator || !verifier || !minPercent) return res.status(400).json({ success: false });
+    if (!position || !name || !creator || !minPercent) return res.status(400).json({ success: false });
     
     let demons = await readDB();
     demons.push({
@@ -81,7 +59,7 @@ app.post('/api/demons/add', async (req, res) => {
         position: parseInt(position),
         name: name,
         creator: creator,
-        verifier: verifier,
+        verifier: verifier || 'Не указан',
         minPercent: parseInt(minPercent),
         victors: []
     });
@@ -100,7 +78,7 @@ app.post('/api/demons/update', async (req, res) => {
         demon.position = parseInt(position);
         demon.name = name;
         demon.creator = creator;
-        demon.verifier = verifier;
+        demon.verifier = verifier || 'Не указан';
         demon.minPercent = parseInt(minPercent);
     }
     await writeDB(demons);
