@@ -81,7 +81,7 @@
 
         window.onload = function() { 
             loadDemons(); 
-            setInterval(loadDemons, 3000); // Опрашиваем сервер Vercel каждые 3 секунды в фоне
+            setInterval(loadDemons, 3000); 
         };
 
         function checkAdmin() {
@@ -104,7 +104,6 @@
             }
         }
 
-        // ПОЛНОЦЕННЫЕ ЗАПРОСЫ НА СЕРВЕР ВЗАМЕН LOCALSTORAGE
         async function loadDemons() {
             const list = document.getElementById('demons-list');
             try {
@@ -224,8 +223,11 @@
             const position = document.getElementById('form-position').value;
             const name = document.getElementById('form-name').value;
             const creator = document.getElementById('form-creator').value;
-            const verifier = document.getElementById('form-verifier').value || 'Не указан';
             const minPercent = document.getElementById('form-min-percent').value;
+            
+            // ИСПРАВЛЕНО: Верификатор теперь полностью убран из обязательной проверки!
+            let verifier = document.getElementById('form-verifier').value;
+            if (!verifier || verifier.trim() === "") { verifier = "Не указан"; }
             
             if (!position || !name || !creator || !minPercent) { alert("Заполните Позицию, Название и Создателя!"); return; }
 
