@@ -3,6 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <title>Server Demonlist</title>
+    
+    <!-- ПОДКЛЮЧАЕМ ЖЕЛЕЗОБЕТОННЫЕ СКРИПТЫ БАЗЫ ДАННЫХ GOOGLE FIREBASE -->
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
+
     <style>
         body { 
             background: radial-gradient(circle at top, #1a1c23 0%, #0f1015 100%); 
@@ -70,7 +75,7 @@
     <div class="container">
         <div class="main-content">
             <h1>Server Demonlist</h1>
-            <div id="demons-list">Подключение к глобальной базе данных...</div>
+            <div id="demons-list">Загрузка всемирного топа...</div>
         </div>
 
         <div class="sidebar">
@@ -111,24 +116,16 @@
     <script>
         const SECRET_ADMIN_CODE = '090909';
         let selectedId = null;
+        let globalDemonsData = []; // Локальный слепок данных из облака
 
-        // ВЫДЕЛЕННЫЙ МЕЖДУНАРОДНЫЙ СКЛАД JSONBIN (ПОЛНОСТЬЮ АВТОНОМНЫЙ)
-        const CLOUD_URL = "https://jsonbin.io";
-        const CLOUD_KEY = "$2a$10$89M0v.N7Y7wL0h/xM60Mze7vN9tB/5y/mC8Sly23nIeQ59L5L/hKW";
-
-        window.onload = function() { 
-            loadDemons(); 
-            setInterval(loadDemons, 3000); 
+        // НАСТРОЙКИ СВЕРХБЫСТРОЙ ЖИВОЙ БАЗЫ FIREBASE (ОТКРЫТАЯ БЕЗОПАСНАЯ КОМНАТА)
+        const firebaseConfig = {
+            databaseURL: "https://firebaseio.com"
         };
-
-        function checkAdmin() {
-            const inputCode = document.getElementById('form-admin-code').value;
-            if (inputCode !== SECRET_ADMIN_CODE) {
-                alert("Ошибка: Неверный код администратора!");
-                return false;
-            }
-            return true;
-        }
+        
+        // Инициализируем Google Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
         function calculatePoints(position, percent, minPercent, totalDemons) {
             if (percent < minPercent) return 0;
             let maxPoints = 250 - (position - 1) * (200 / Math.max(totalDemons, 1));
@@ -141,78 +138,68 @@
             }
         }
 
-        async function fetchGlobalCloud() {
-            try {
-                const res = await fetch(`${CLOUD_URL}/latest`, {
-                    headers: { 'X-Master-Key': CLOUD_KEY }
+        // ЖИВОЙ СЛУШАТЕЛЬ GOOGLE: Ловит изменения на лету БЕЗ fetch() и БЕЗ ошибок CORS!
+        database.ref('demons').on('value', (snapshot) => {
+            const dataObj = snapshot.val();
+            
+            // Превращаем объект Firebase в красивый рабочий массив
+            globalDemonsData = [];
+            if (dataObj) {
+                Object.keys(dataObj).forEach(key => {
+                    let demon = dataObj[key];
+                    demon.id = key; // Сохраняем уникальный ключ Firebase как ID уровня
+                    if (!demon.victors) demon.victors = [];
+                    globalDemonsData.push(demon);
                 });
-                const resData = await res.json();
-                return resData && resData.record ? resData.record : [];
-            } catch (e) { return []; }
-        }
+            }
+            
+            renderDemonsDOM();
+        });
 
-        async function saveGlobalCloud(newData) {
-            try {
-                const res = await fetch(CLOUD_URL, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Master-Key': CLOUD_KEY
-                    },
-                    body: JSON.stringify(newData)
-                });
-                return res.ok;
-            } catch (e) { return false; }
-        }
-
-        async function loadDemons() {
+        function renderDemonsDOM() {
             const list = document.getElementById('demons-list');
-            try {
-                const data = await fetchGlobalCloud();
-                
-                if (!data || data.length === 0) { 
-                    list.innerHTML = 'Лист пуст.'; 
-                    document.getElementById('leaderboard-content').innerHTML = 'Пока нет записанных рекордов.';
-                    return; 
-                }
-                
-                data.sort((a, b) => a.position - b.position);
-                let playerScores = {};
-                let newHtml = '';
+            if (globalDemonsData.length === 0) { 
+                list.innerHTML = 'Лист пуст.'; 
+                document.getElementById('leaderboard-content').innerHTML = 'Пока нет записанных рекордов.';
+                return; 
+            }
+            
+            globalDemonsData.sort((a, b) => a.position - b.position);
+            let playerScores = {};
+            let newHtml = '';
 
-                data.forEach(d => {
-                    const isSelected = selectedId === d.id;
-                    let posColor = '#ff4a4a';
-                    if (d.position === 1) posColor = '#ffd700';
-                    if (d.position === 2) posColor = '#c0c0c0';
-                    if (d.position === 3) posColor = '#cd7f32';
-                    
-                    newHtml += `<div class="demon-card-wrapper ${isSelected ? 'active' : ''}" style="border-left-color: ${posColor}">
-                        <div onclick='selectDemon(${JSON.stringify(d)})'>
-                            <h3><span style="color: ${posColor}">#${d.position}</span> - ${d.name}</h3>
-                            <p>Создатель: <span style="color:#fff">${d.creator}</span> | Верификатор: <span style="color:#fff">${d.verifier || 'Не указан'}</span> | Мин. процент: <span style="color:#ffb84d">${d.minPercent || 100}%</span></p>
-                        </div>
-                    `;
+            globalDemonsData.forEach(d => {
+                const isSelected = selectedId === d.id;
+                let posColor = '#ff4a4a';
+                if (d.position === 1) posColor = '#ffd700';
+                if (d.position === 2) posColor = '#c0c0c0';
+                if (d.position === 3) posColor = '#cd7f32';
+                
+                newHtml += `<div class="demon-card-wrapper ${isSelected ? 'active' : ''}" style="border-left-color: ${posColor}">
+                    <div onclick='selectDemon(${JSON.stringify(d)})'>
+                        <h3><span style="color: ${posColor}">#${d.position}</span> - ${d.name}</h3>
+                        <p>Создатель: <span style="color:#fff">${d.creator}</span> | Верификатор: <span style="color:#fff">${d.verifier || 'Не указан'}</span> | Мин. процент: <span style="color:#ffb84d">${d.minPercent || 100}%</span></p>
+                    </div>
+                `;
 
-                    if (d.victors && d.victors.length > 0) {
-                        newHtml += `<div class="victors-list"><strong>🏆 Победители:</strong>`;
-                        d.victors.forEach(v => {
-                            let pts = calculatePoints(d.position, v.percent || 100, d.minPercent || 100, data.length);
-                            newHtml += `<div class="victor-item">
-                                <span>👤 <b>${v.name}</b> — ${v.percent || 100}% (<span style="color:#00ff66">+${pts} PTS</span>)</span>
-                                <a href="${v.video}" target="_blank" class="video-btn">🎬 Видео</a>
-                            </div>`;
-                            if (!playerScores[v.name]) playerScores[v.name] = 0;
-                            playerScores[v.name] += pts;
-                        });
-                        newHtml += `</div>`;
-                    }
+                if (d.victors && d.victors.length > 0) {
+                    newHtml += `<div class="victors-list"><strong>🏆 Победители:</strong>`;
+                    d.victors.forEach(v => {
+                        let pts = calculatePoints(d.position, v.percent || 100, d.minPercent || 100, globalDemonsData.length);
+                        newHtml += `<div class="victor-item">
+                            <span>👤 <b>${v.name}</b> — ${v.percent || 100}% (<span style="color:#00ff66">+${pts} PTS</span>)</span>
+                            <a href="${v.video}" target="_blank" class="video-btn">🎬 Видео</a>
+                        </div>`;
+                        if (!playerScores[v.name]) playerScores[v.name] = 0;
+                        playerScores[v.name] += pts;
+                    });
                     newHtml += `</div>`;
-                });
+                }
+                newHtml += `</div>`;
+            });
 
-                if (list.innerHTML !== newHtml) { list.innerHTML = newHtml; }
-                renderLeaderboard(playerScores);
-            } catch (e) { list.innerHTML = 'Ошибка загрузки данных.'; }
+            if (list.innerHTML !== newHtml) { list.innerHTML = newHtml; }
+            renderLeaderboard(playerScores);
         }
         function renderLeaderboard(scores) {
             const board = document.getElementById('leaderboard-content');
@@ -277,7 +264,7 @@
             document.getElementById('form-admin-code').value = '';
         }
 
-        async function saveDemonChanges() {
+        function saveDemonChanges() {
             if (!checkAdmin()) return;
             const position = document.getElementById('form-position').value;
             const name = document.getElementById('form-name').value;
@@ -288,66 +275,59 @@
             if (!verifier || verifier.trim() === "") { verifier = "Не указан"; }
             if (!position || !name || !creator || !minPercent) { alert("Заполните Позицию, Название, Создателя и Процент!"); return; }
 
-            let demons = await fetchGlobalCloud();
+            const demonData = {
+                position: parseInt(position),
+                name: name,
+                creator: creator,
+                verifier: verifier,
+                minPercent: parseInt(minPercent)
+            };
 
             if (selectedId !== null) {
-                const demon = demons.find(d => d.id === selectedId);
-                if (demon) {
-                    demon.position = parseInt(position);
-                    demon.name = name;
-                    demon.creator = creator;
-                    demon.verifier = verifier;
-                    demon.minPercent = parseInt(minPercent);
-                }
+                // Обновляем существующий уровень в Google Firebase
+                database.ref('demons/' + selectedId).update(demonData)
+                    .then(() => { alert("Уровень обновлен!"); createNewDemonFields(); })
+                    .catch(() => { alert("Ошибка обновления."); });
             } else {
-                demons.push({
-                    id: "id_" + Date.now(),
-                    position: parseInt(position),
-                    name: name,
-                    creator: creator,
-                    verifier: verifier,
-                    minPercent: parseInt(minPercent),
-                    victors: []
-                });
+                // Создаем новый вечный уровень в облаке
+                demonData.victors = [];
+                database.ref('demons').push(demonData)
+                    .then(() => { alert("Уровень сохранен в базу Google Firebase!"); createNewDemonFields(); })
+                    .catch(() => { alert("Ошибка сохранения базы данных."); });
             }
-
-            const success = await saveGlobalCloud(demons);
-            if (success) { alert("Уровень успешно сохранен в интернет-облако!"); createNewDemonFields(); loadDemons(); }
-            else { alert("Ошибка соединения."); }
         }
 
-        async function deleteDemon() {
+        function deleteDemon() {
             if (!checkAdmin()) return;
             if (selectedId === null || !confirm("Вы уверены?")) return;
             
-            let demons = await fetchGlobalCloud();
-            demons = demons.filter(d => d.id !== selectedId);
-            
-            const success = await saveGlobalCloud(demons);
-            if (success) { alert("Удалено!"); createNewDemonFields(); loadDemons(); }
-            else { alert("Ошибка удаления."); }
+            database.ref('demons/' + selectedId).remove()
+                .then(() => { alert("Удалено!"); createNewDemonFields(); })
+                .catch(() => { alert("Ошибка удаления."); });
         }
 
-        async function addVictor() {
+        function addVictor() {
             if (!checkAdmin()) return;
             const nInput = document.getElementById('victor-name');
             const pInput = document.getElementById('victor-percent');
             const vInput = document.getElementById('victor-video');
             if (!nInput.value || !pInput.value || !vInput.value || selectedId === null) { alert("Заполните все поля рекорда!"); return; }
             
-            let demons = await fetchGlobalCloud();
-            const demon = demons.find(d => d.id === selectedId);
+            const demon = globalDemonsData.find(d => d.id === selectedId);
             if (demon) {
                 if (parseInt(pInput.value) < demon.minPercent) {
                     alert(`Ошибка: Процент меньше лимита листа (${demon.minPercent}%)!`);
                     return;
                 }
-                if (!demon.victors) demon.victors = [];
-                demon.victors.push({ name: nInput.value, percent: parseInt(pInput.value), video: vInput.value });
                 
-                const success = await saveGlobalCloud(demons);
-                if (success) { alert("Рекорд записан в облако!"); nInput.value = ''; pInput.value = '100'; vInput.value = ''; loadDemons(); }
-                else { alert("Ошибка записи рекорда."); }
+                if (!demon.victors) demon.victors = [];
+                
+                // Создаем новый массив победителей и заливаем его в Firebase
+                let newVictors = [...demon.victors, { name: nInput.value, percent: parseInt(pInput.value), video: vInput.value }];
+                
+                database.ref('demons/' + selectedId + '/victors').set(newVictors)
+                    .then(() => { alert("Рекорд записан в облако!"); nInput.value = ''; pInput.value = '100'; vInput.value = ''; })
+                    .catch(() => { alert("Ошибка записи рекорда."); });
             }
         }
     </script>
