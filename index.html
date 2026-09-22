@@ -80,12 +80,8 @@
         let selectedId = null;
 
         window.onload = function() { 
-            if (!localStorage.getItem('local_db_v5')) {
-                const startData = [{ id: "id_1", position: 1, name: "Acheron", creator: "Riot", verifier: "Riot", minPercent: 100, victors: [] }];
-                localStorage.setItem('local_db_v5', JSON.stringify(startData));
-            }
             loadDemons(); 
-            setInterval(loadDemons, 1000); 
+            setInterval(loadDemons, 3000); // Опрашиваем сервер Vercel каждые 3 секунды в фоне
         };
 
         function checkAdmin() {
@@ -108,52 +104,56 @@
             }
         }
 
-        function loadDemons() {
+        // ПОЛНОЦЕННЫЕ ЗАПРОСЫ НА СЕРВЕР ВЗАМЕН LOCALSTORAGE
+        async function loadDemons() {
             const list = document.getElementById('demons-list');
-            
-            const data = JSON.parse(localStorage.getItem('local_db_v5') || '[]');
-            if (!data || data.length === 0) { 
-                list.innerHTML = 'Лист пуст.'; 
-                document.getElementById('leaderboard-content').innerHTML = 'Пока нет записанных рекордов.';
-                return; 
-            }
-            
-            data.sort((a, b) => a.position - b.position);
-            let playerScores = {};
-            let newHtml = '';
-
-            data.forEach(d => {
-                const isSelected = selectedId === d.id;
-                let posColor = '#ff4a4a';
-                if (d.position === 1) posColor = '#ffd700';
-                if (d.position === 2) posColor = '#c0c0c0';
-                if (d.position === 3) posColor = '#cd7f32';
+            try {
+                const response = await fetch('/api/demons');
+                const data = await response.json();
                 
-                newHtml += `<div class="demon-card-wrapper ${isSelected ? 'active' : ''}" style="border-left-color: ${posColor}">
-                    <div onclick='selectDemon(${JSON.stringify(d)})'>
-                        <h3><span style="color: ${posColor}">#${d.position}</span> - ${d.name}</h3>
-                        <p>Создатель: <span style="color:#fff">${d.creator}</span> | Верификатор: <span style="color:#fff">${d.verifier || 'Не указан'}</span> | Мин. процент: <span style="color:#ffb84d">${d.minPercent || 100}%</span></p>
-                    </div>
-                `;
-
-                if (d.victors && d.victors.length > 0) {
-                    newHtml += `<div class="victors-list"><strong>🏆 Рекорды:</strong>`;
-                    d.victors.forEach(v => {
-                        let pts = calculatePoints(d.position, v.percent || 100, d.minPercent || 100, data.length);
-                        newHtml += `<div class="victor-item">
-                            <span>👤 <b>${v.name}</b> — ${v.percent || 100}% (<span style="color:#00ff66">+${pts} PTS</span>)</span>
-                            <a href="${v.video}" target="_blank" class="video-btn">▶ Видео</a>
-                        </div>`;
-                        if (!playerScores[v.name]) playerScores[v.name] = 0;
-                        playerScores[v.name] += pts;
-                    });
-                    newHtml += `</div>`;
+                if (!data || data.length === 0) { 
+                    list.innerHTML = 'Лист пуст.'; 
+                    document.getElementById('leaderboard-content').innerHTML = 'Пока нет записанных рекордов.';
+                    return; 
                 }
-                newHtml += `</div>`;
-            });
+                
+                data.sort((a, b) => a.position - b.position);
+                let playerScores = {};
+                let newHtml = '';
 
-            if (list.innerHTML !== newHtml) { list.innerHTML = newHtml; }
-            renderLeaderboard(playerScores);
+                data.forEach(d => {
+                    const isSelected = selectedId === d.id;
+                    let posColor = '#ff4a4a';
+                    if (d.position === 1) posColor = '#ffd700';
+                    if (d.position === 2) posColor = '#c0c0c0';
+                    if (d.position === 3) posColor = '#cd7f32';
+                    
+                    newHtml += `<div class="demon-card-wrapper ${isSelected ? 'active' : ''}" style="border-left-color: ${posColor}">
+                        <div onclick='selectDemon(${JSON.stringify(d)})'>
+                            <h3><span style="color: ${posColor}">#${d.position}</span> - ${d.name}</h3>
+                            <p>Создатель: <span style="color:#fff">${d.creator}</span> | Верификатор: <span style="color:#fff">${d.verifier || 'Не указан'}</span> | Мин. процент: <span style="color:#ffb84d">${d.minPercent || 100}%</span></p>
+                        </div>
+                    `;
+
+                    if (d.victors && d.victors.length > 0) {
+                        newHtml += `<div class="victors-list"><strong>🏆 Рекорды:</strong>`;
+                        d.victors.forEach(v => {
+                            let pts = calculatePoints(d.position, v.percent || 100, d.minPercent || 100, data.length);
+                            newHtml += `<div class="victor-item">
+                                <span>👤 <b>${v.name}</b> — ${v.percent || 100}% (<span style="color:#00ff66">+${pts} PTS</span>)</span>
+                                <a href="${v.video}" target="_blank" class="video-btn">▶ Видео</a>
+                            </div>`;
+                            if (!playerScores[v.name]) playerScores[v.name] = 0;
+                            playerScores[v.name] += pts;
+                        });
+                        newHtml += `</div>`;
+                    }
+                    newHtml += `</div>`;
+                });
+
+                if (list.innerHTML !== newHtml) { list.innerHTML = newHtml; }
+                renderLeaderboard(playerScores);
+            } catch (e) { list.innerHTML = 'Нет связи с сервером.'; }
         }
         function renderLeaderboard(scores) {
             const board = document.getElementById('leaderboard-content');
@@ -218,8 +218,9 @@
             document.getElementById('form-admin-code').value = '';
         }
 
-        function saveDemonChanges() {
+        async function saveDemonChanges() {
             if (!checkAdmin()) return;
+            const adminCode = document.getElementById('form-admin-code').value;
             const position = document.getElementById('form-position').value;
             const name = document.getElementById('form-name').value;
             const creator = document.getElementById('form-creator').value;
@@ -228,67 +229,48 @@
             
             if (!position || !name || !creator || !minPercent) { alert("Заполните Позицию, Название и Создателя!"); return; }
 
-            let demons = JSON.parse(localStorage.getItem('local_db_v5') || '[]');
-
-            if (selectedId !== null) {
-                const demon = demons.find(d => d.id === selectedId);
-                if (demon) {
-                    demon.position = parseInt(position);
-                    demon.name = name;
-                    demon.creator = creator;
-                    demon.verifier = verifier;
-                    demon.minPercent = parseInt(minPercent);
-                }
-            } else {
-                demons.push({
-                    id: "id_" + Date.now(),
-                    position: parseInt(position),
-                    name: name,
-                    creator: creator,
-                    verifier: verifier,
-                    minPercent: parseInt(minPercent),
-                    victors: []
+            const body = { position: parseInt(position), name, creator, verifier, minPercent, id: selectedId };
+            try {
+                const url = selectedId !== null ? `/api/demons/update` : `/api/demons/add`;
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
+                    body: JSON.stringify(body)
                 });
-            }
-
-            localStorage.setItem('local_db_v5', JSON.stringify(demons));
-            alert("Уровень сохранен!");
-            createNewDemonFields();
+                if (res.ok) { alert("Уровень сохранен в глобальное облако!"); createNewDemonFields(); }
+            } catch (e) { alert("Ошибка сохранения."); }
         }
 
-        function deleteDemon() {
+        async function deleteDemon() {
             if (!checkAdmin()) return;
             if (selectedId === null || !confirm("Вы уверены?")) return;
-            
-            let demons = JSON.parse(localStorage.getItem('local_db_v5') || '[]');
-            demons = demons.filter(d => d.id !== selectedId);
-            
-            localStorage.setItem('local_db_v5', JSON.stringify(demons));
-            alert("Удалено!");
-            createNewDemonFields();
+            const adminCode = document.getElementById('form-admin-code').value;
+            try {
+                const res = await fetch('/api/demons/delete', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
+                    body: JSON.stringify({ id: selectedId })
+                });
+                if (res.ok) { alert("Удалено для всех!"); createNewDemonFields(); }
+            } catch (e) { alert("Ошибка удаления."); }
         }
 
-        function addVictor() {
+        async function addVictor() {
             if (!checkAdmin()) return;
+            const adminCode = document.getElementById('form-admin-code').value;
             const nInput = document.getElementById('victor-name');
             const pInput = document.getElementById('victor-percent');
             const vInput = document.getElementById('victor-video');
             if (!nInput.value || !pInput.value || !vInput.value || selectedId === null) { alert("Заполните поля!"); return; }
             
-            // ИСПРАВЛЕНО: Теперь версия базы v5 прописана абсолютно правильно!
-            let demons = JSON.parse(localStorage.getItem('local_db_v5') || '[]');
-            const demon = demons.find(d => d.id === selectedId);
-            if (demon) {
-                if (parseInt(pInput.value) < demon.minPercent) {
-                    alert(`Ошибка: Процент меньше лимита листа (${demon.minPercent}%)!`);
-                    return;
-                }
-                if (!demon.victors) demon.victors = [];
-                demon.victors.push({ name: nInput.value, percent: parseInt(pInput.value), video: vInput.value });
-                localStorage.setItem('local_db_v5', JSON.stringify(demons));
-                alert("Рекорд записан!");
-                nInput.value = ''; pInput.value = '100'; vInput.value = '';
-            }
+            try {
+                const res = await fetch('/api/demons/add-victor', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
+                    body: JSON.stringify({ id: selectedId, name: nInput.value, percent: parseInt(pInput.value), video: vInput.value })
+                });
+                if (res.ok) { alert("Рекорд записан для всех!"); nInput.value = ''; pInput.value = '100'; vInput.value = ''; }
+            } catch (e) { console.error(e); }
         }
     </script>
 </body>
