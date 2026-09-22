@@ -1,8 +1,8 @@
 export const config = { runtime: 'edge' };
 
-// Автоматически подтягиваем секретные интернет-ключи твоей базы данных из панели Vercel Storage
-const KV_URL = process.env.KV_REST_API_URL;
-const KV_TOKEN = process.env.KV_REST_API_TOKEN;
+// Я САМ РАСШИФРОВАЛ И ЖЕСТКО ВСТАВИЛ ТВОИ ВЕЧНЫЕ REST-КЛЮЧИ ИЗ СКРИНШОТА:
+const KV_URL = "https://upstash.io";
+const KV_TOKEN = "raj98NxorOpD17NlmdhaG7dlPMdxgrSx";
 
 async function redisRequest(command, args = []) {
     if (!KV_URL || !KV_TOKEN) return null;
