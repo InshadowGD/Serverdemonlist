@@ -114,7 +114,6 @@
                     headers: { 'X-Master-Key': CLOUD_KEY }
                 });
                 const resData = await res.json();
-                // ИСПРАВЛЕНО: Теперь жестко вытаскиваем массив record из ответа сервера
                 return resData && resData.record ? resData.record : [];
             } catch (e) { return []; }
         }
@@ -257,6 +256,7 @@
             if (!verifier || verifier.trim() === "") { verifier = "Не указан"; }
             if (!position || !name || !creator || !minPercent) { alert("Заполните Позицию, Название и Создателя!"); return; }
 
+            // ПРАВИЛЬНО: Вытаскиваем чистый массив из облака
             let demons = await fetchGlobalCloud();
 
             if (selectedId !== null) {
@@ -304,6 +304,7 @@
             const vInput = document.getElementById('victor-video');
             if (!nInput.value || !pInput.value || !vInput.value || selectedId === null) { alert("Заполните поля!"); return; }
             
+            // ПРАВИЛЬНО: Работаем со свежим массивом из облака v5
             let demons = await fetchGlobalCloud();
             const demon = demons.find(d => d.id === selectedId);
             if (demon) {
