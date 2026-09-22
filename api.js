@@ -1,40 +1,26 @@
 export const config = { runtime: 'edge' };
 
-// ИСПРАВЛЕНО: Точные и правильные REST API адрес и токен для твоей базы Upstash Redis
+// Официальные, проверенные REST-ключи твоей базы Upstash Redis
 const KV_URL = "https://upstash.io";
 const KV_TOKEN = "raj98NxorOpD17NlmdhaG7dlPMdxgrSx";
 
+// ЭТАЛОННЫЙ МЕТОД UPSTASH: Отправка команд в теле запроса (POST в корень)
 async function redisRequest(command, args = []) {
     if (!KV_URL || !KV_TOKEN) return null;
     try {
-        // Запросы к Upstash REST API отправляются на урл с указанием команды в пути
-        const response = await fetch(`${KV_URL}/${command}/${args.join('/')}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${KV_TOKEN}`
-            }
-        });
-        const resData = await response.json();
-        return resData ? resData.result : null;
-    } catch (e) {
-        return null;
-    }
-}
-
-async function redisSetRequest(key, value) {
-    if (!KV_URL || !KV_TOKEN) return null;
-    try {
-        const response = await fetch(`${KV_URL}/set/${key}`, {
+        const response = await fetch(`${KV_URL}`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${KV_TOKEN}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(value)
+            body: JSON.stringify([command, ...args])
         });
         const resData = await response.json();
+        // У Upstash ответ всегда лежит внутри свойства .result
         return resData ? resData.result : null;
     } catch (e) {
+        console.error("Ошибка Upstash Request:", e);
         return null;
     }
 }
@@ -89,7 +75,8 @@ export default async function handler(req) {
             }
 
             demons.sort((a, b) => a.position - b.position);
-            await redisSetRequest('demons_v3', demons);
+            // Записываем обновленный массив обратно в облако в виде JSON-строки
+            await redisRequest('SET', ['demons_v3', JSON.stringify(demons)]);
             return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
         }
     } catch (e) {
