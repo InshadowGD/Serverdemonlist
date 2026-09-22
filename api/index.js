@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const https = require('https');
+const { kv } = require('@vercel/kv'); // Полноценное нативное облако Redis
 const app = express();
 
 app.use(cors());
@@ -8,56 +8,24 @@ app.use(express.json());
 
 const SECRET_ADMIN_CODE = '090909';
 
-// Берём ключи подключения к Redis из панели Vercel Storage
-const KV_URL = process.env.KV_REST_API_URL;
-const KV_TOKEN = process.env.KV_REST_API_TOKEN;
-
-// Функция для безопасных и надёжных запросов в облако Redis
-function kvRequest(path, method = 'GET', body = null) {
-    return new Promise((resolve) => {
-        if (!KV_URL || !KV_TOKEN) return resolve(null);
-        
-        // Превращаем URL в понятные серверные компоненты
-        const urlStr = path.startsWith('http') ? path : `${KV_URL}${path}`;
-        const url = new URL(urlStr);
-        
-        const options = {
-            method: method,
-            headers: {
-                'Authorization': `Bearer ${KV_TOKEN}`,
-                'Content-Type': 'application/json'
-            }
-        };
-
-        const req = https.request(url, options, (res) => {
-            let data = '';
-            res.on('data', (chunk) => { data += chunk; });
-            res.on('end', () => {
-                try { resolve(JSON.parse(data)); } catch (e) { resolve(null); }
-            });
-        });
-
-        req.on('error', () => { resolve(null); });
-        if (body) req.write(JSON.stringify(body));
-        req.end();
-    });
-}
-
 async function readDB() {
     try {
-        const result = await kvRequest('/get/demons');
-        if (result && result.result) {
-            return typeof result.result === 'string' ? JSON.parse(result.result) : result.result;
+        const demons = await kv.get('demons');
+        if (!demons) {
+            const startData = [{ position: 1, name: "Acheron", creator: "Riot", verifier: "Riot", victors: [] }];
+            await kv.set('demons', startData);
+            return startData;
         }
-        // Если база пустая — создаём стартовый уровень
-        const startData = [{ position: 1, name: "Acheron", creator: "Riot", verifier: "Riot", victors: [] }];
-        await writeDB(startData);
-        return startData;
-    } catch (e) { return []; }
+        return Array.isArray(demons) ? demons : [];
+    } catch (e) { 
+        return []; 
+    }
 }
 
 async function writeDB(data) {
-    await kvRequest('/set/demons', 'POST', data);
+    try { 
+        await kv.set('demons', data); 
+    } catch (e) {}
 }
 
 function isNotAdmin(req) {
