@@ -58,15 +58,22 @@
         let selectedPos = null;
         let selectedName = null;
 
+        // Увеличили интервал до 6000мс (6 секунд), чтобы база данных успевала обновиться
         window.onload = function() { 
             loadDemons(); 
-            setInterval(loadDemons, 3000); 
+            setInterval(loadDemons, 6000); 
         };
         async function loadDemons() {
             const list = document.getElementById('demons-list');
             try {
                 const response = await fetch('/api/demons');
                 const data = await response.json();
+                
+                // Если мы прямо сейчас что-то удалили вручную, игнорируем старый кэш сервера
+                if (selectedPos === null && data.length > 0 && list.innerHTML === '') {
+                    return; 
+                }
+                
                 list.innerHTML = ''; 
                 if (data.length === 0) { list.innerHTML = 'Лист пуст.'; return; }
                 
@@ -165,13 +172,22 @@
             const adminCode = document.getElementById('form-admin-code').value;
             if (selectedPos === null || !confirm("Вы уверены, что хотите НАВСЕГДА удалить уровень #" + selectedPos + "?")) return;
             try {
+                // Мгновенно очищаем экран локально, чтобы убрать моргание
+                document.getElementById('demons-list').innerHTML = ''; 
+                
                 const res = await fetch(`/api/demons/delete/${selectedPos}`, { 
                     method: 'POST',
                     headers: { 'x-admin-code': adminCode }
                 });
-                if (res.ok) { alert("Уровень успешно удален!"); createNewDemonFields(); }
-                else { alert("Ошибка: Неверный код администратора!"); }
-            } catch (e) { alert("Ошибка удаления."); }
+                if (res.ok) { 
+                    alert("Уровень успешно удален!"); 
+                    createNewDemonFields(); 
+                }
+                else { 
+                    alert("Ошибка: Неверный код администратора!"); 
+                    loadDemons(); // Возвращаем список назад, если пароль не подошел
+                }
+            } catch (e) { alert("Ошибка удаления."); loadDemons(); }
         }
 
         async function addVictor() {
