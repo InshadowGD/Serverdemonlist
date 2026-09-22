@@ -126,7 +126,7 @@
             document.getElementById('form-name').value = '';
             document.getElementById('form-creator').value = '';
             document.getElementById('form-verifier').value = '';
-            document.getElementById('form-admin-code').value = '';
+            // Код администратора НЕ стираем, чтобы он не пропадал при переключениях!
         }
 
         async function saveDemonChanges() {
@@ -170,16 +170,23 @@
         }
 
         async function addVictor() {
+            const adminCode = document.getElementById('form-admin-code').value;
             const nInput = document.getElementById('victor-name');
             const vInput = document.getElementById('victor-video');
-            if (!nInput.value || !vInput.value || selectedPos === null) { alert("Заполните поля рекорда!"); return; }
+            if (!nInput.value || !vInput.value || selectedPos === null) { alert("Выберите уровень и заполните поля рекорда!"); return; }
             try {
                 const res = await fetch(`/api/demons/${selectedPos}/victor`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
                     body: JSON.stringify({ name: nInput.value, video: vInput.value })
                 });
-                if (res.ok) { alert("Рекорд записан!"); nInput.value = ''; vInput.value = ''; loadDemons(); }
+                if (res.ok) { 
+                    alert("Рекорд успешно записан!"); 
+                    nInput.value = ''; 
+                    vInput.value = ''; 
+                    loadDemons(); 
+                }
+                else { alert("Ошибка: Неверный код администратора для записи рекорда!"); }
             } catch (e) { console.error(e); }
         }
     </script>
