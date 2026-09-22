@@ -77,15 +77,11 @@
 
     <script>
         const SECRET_ADMIN_CODE = '090909';
-        
-        const CLOUD_URL = "https://jsonbin.io";
-        const CLOUD_KEY = "$2a$10$89M0v.N7Y7wL0h/xM60Mze7vN9tB/5y/mC8Sly23nIeQ59L5L/hKW";
-
         let selectedId = null;
 
         window.onload = function() { 
             loadDemons(); 
-            setInterval(loadDemons, 2500); 
+            setInterval(loadDemons, 3000); // Опрашиваем твой сервер Vercel Redis раз в 3 секунды
         };
 
         function checkAdmin() {
@@ -108,34 +104,11 @@
             }
         }
 
-        async function fetchGlobalCloud() {
-            try {
-                const res = await fetch(`${CLOUD_URL}/latest`, {
-                    headers: { 'X-Master-Key': CLOUD_KEY }
-                });
-                const resData = await res.json();
-                return resData && resData.record ? resData.record : [];
-            } catch (e) { return []; }
-        }
-
-        async function saveGlobalCloud(newData) {
-            try {
-                const res = await fetch(CLOUD_URL, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Master-Key': CLOUD_KEY
-                    },
-                    body: JSON.stringify(newData)
-                });
-                return res.ok;
-            } catch (e) { return false; }
-        }
-
         async function loadDemons() {
             const list = document.getElementById('demons-list');
             try {
-                const data = await fetchGlobalCloud();
+                const response = await fetch('/api/demons');
+                const data = await response.json();
                 
                 if (!data || data.length === 0) { 
                     list.innerHTML = 'Лист пуст.'; 
@@ -179,7 +152,7 @@
 
                 if (list.innerHTML !== newHtml) { list.innerHTML = newHtml; }
                 renderLeaderboard(playerScores);
-            } catch (e) { list.innerHTML = 'Нет связи с облачным хранилищем.'; }
+            } catch (e) { list.innerHTML = 'Нет связи с сервером.'; }
         }
         function renderLeaderboard(scores) {
             const board = document.getElementById('leaderboard-content');
@@ -256,69 +229,48 @@
             if (!verifier || verifier.trim() === "") { verifier = "Не указан"; }
             if (!position || !name || !creator || !minPercent) { alert("Заполните Позицию, Название и Создателя!"); return; }
 
-            // ПРАВИЛЬНО: Вытаскиваем чистый массив из облака
-            let demons = await fetchGlobalCloud();
-
-            if (selectedId !== null) {
-                const demon = demons.find(d => d.id === selectedId);
-                if (demon) {
-                    demon.position = parseInt(position);
-                    demon.name = name;
-                    demon.creator = creator;
-                    demon.verifier = verifier;
-                    demon.minPercent = parseInt(minPercent);
-                }
-            } else {
-                demons.push({
-                    id: "id_" + Date.now(),
-                    position: parseInt(position),
-                    name: name,
-                    creator: creator,
-                    verifier: verifier,
-                    minPercent: parseInt(minPercent),
-                    victors: []
+            const body = { position: parseInt(position), name, creator, verifier, minPercent, id: selectedId };
+            try {
+                const url = selectedId !== null ? `/api/demons/update` : `/api/demons/add`;
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
+                    body: JSON.stringify(body)
                 });
-            }
-
-            const success = await saveGlobalCloud(demons);
-            if (success) { alert("Уровень успешно сохранен в глобальное облако!"); createNewDemonFields(); loadDemons(); }
-            else { alert("Ошибка соединения с облаком."); }
+                if (res.ok) { alert("Уровень успешно сохранен в облако Redis!"); createNewDemonFields(); }
+            } catch (e) { alert("Ошибка сохранения."); }
         }
 
         async function deleteDemon() {
             if (!checkAdmin()) return;
             if (selectedId === null || !confirm("Вы уверены?")) return;
-            
-            let demons = await fetchGlobalCloud();
-            demons = demons.filter(d => d.id !== selectedId);
-            
-            const success = await saveGlobalCloud(demons);
-            if (success) { alert("Удалено из облака!"); createNewDemonFields(); loadDemons(); }
-            else { alert("Ошибка удаления."); }
+            const adminCode = document.getElementById('form-admin-code').value;
+            try {
+                const res = await fetch('/api/demons/delete', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
+                    body: JSON.stringify({ id: selectedId })
+                });
+                if (res.ok) { alert("Удалено для всех!"); createNewDemonFields(); }
+            } catch (e) { alert("Ошибка удаления."); }
         }
 
         async function addVictor() {
             if (!checkAdmin()) return;
+            const adminCode = document.getElementById('form-admin-code').value;
             const nInput = document.getElementById('victor-name');
             const pInput = document.getElementById('victor-percent');
             const vInput = document.getElementById('victor-video');
             if (!nInput.value || !pInput.value || !vInput.value || selectedId === null) { alert("Заполните поля!"); return; }
             
-            // ПРАВИЛЬНО: Работаем со свежим массивом из облака v5
-            let demons = await fetchGlobalCloud();
-            const demon = demons.find(d => d.id === selectedId);
-            if (demon) {
-                if (parseInt(pInput.value) < demon.minPercent) {
-                    alert(`Ошибка: Процент меньше лимита листа (${demon.minPercent}%)!`);
-                    return;
-                }
-                if (!demon.victors) demon.victors = [];
-                demon.victors.push({ name: nInput.value, percent: parseInt(pInput.value), video: vInput.value });
-                
-                const success = await saveGlobalCloud(demons);
-                if (success) { alert("Рекорд записан в облако!"); nInput.value = ''; pInput.value = '100'; vInput.value = ''; loadDemons(); }
-                else { alert("Ошибка записи рекорда."); }
-            }
+            try {
+                const res = await fetch('/api/demons/add-victor', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
+                    body: JSON.stringify({ id: selectedId, name: nInput.value, percent: parseInt(pInput.value), video: vInput.value })
+                });
+                if (res.ok) { alert("Рекорд записан для всех!"); nInput.value = ''; pInput.value = '100'; vInput.value = ''; }
+            } catch (e) { console.error(e); }
         }
     </script>
 </body>
