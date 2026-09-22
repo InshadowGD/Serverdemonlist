@@ -66,7 +66,6 @@
         .victors-list strong { color: #ffb84d; display: block; margin-bottom: 8px; font-size: 0.9rem; text-transform: uppercase; }
         .victor-item { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px; margin: 6px 0; }
         
-        /* ИСПРАВЛЕНО: Новый прокачанный дизайн кнопки видео-доказательства */
         .video-btn { 
             color: #4af3ff; 
             text-decoration: none; 
@@ -144,12 +143,14 @@
         const SECRET_ADMIN_CODE = '090909';
         let selectedId = null;
 
+        // МАГИЯ ТУТ: Теперь сайт сам полностью обновляет данные каждую секунду (1000мс)
         window.onload = function() { 
             if (!localStorage.getItem('local_db_v4')) {
                 const startData = [{ id: "id_1", position: 1, name: "Acheron", creator: "Riot", verifier: "Riot", minPercent: 100, victors: [] }];
                 localStorage.setItem('local_db_v4', JSON.stringify(startData));
             }
             loadDemons(); 
+            setInterval(loadDemons, 1000); 
         };
 
         function checkAdmin() {
@@ -176,7 +177,6 @@
 
         function loadDemons() {
             const list = document.getElementById('demons-list');
-            list.innerHTML = '';
             
             const data = JSON.parse(localStorage.getItem('local_db_v4') || '[]');
             if (data.length === 0) { 
@@ -188,18 +188,18 @@
             data.sort((a, b) => a.position - b.position);
             let playerScores = {};
 
+            // Фиксируем, что было внутри, чтобы интерфейс не прыгал при каждой перезагрузке секундного таймера
+            let newHtml = '';
+
             data.forEach(d => {
                 const isSelected = selectedId === d.id;
-                const wrapper = document.createElement('div');
-                wrapper.className = `demon-card-wrapper ${isSelected ? 'active' : ''}`;
                 
                 let posColor = '#ff4a4a';
                 if (d.position === 1) posColor = '#ffd700';
                 if (d.position === 2) posColor = '#c0c0c0';
                 if (d.position === 3) posColor = '#cd7f32';
-                wrapper.style.borderLeftColor = posColor;
                 
-                let html = `
+                newHtml += `<div class="demon-card-wrapper ${isSelected ? 'active' : ''}" style="border-left-color: ${posColor}">
                     <div onclick='selectDemon(${JSON.stringify(d)})'>
                         <h3><span style="color: ${posColor}">#${d.position}</span> - ${d.name}</h3>
                         <p>Создатель: <span style="color:#fff">${d.creator}</span> | Мин. процент: <span style="color:#ffb84d">${d.minPercent || 100}%</span></p>
@@ -207,11 +207,10 @@
                 `;
 
                 if (d.victors && d.victors.length > 0) {
-                    html += `<div class="victors-list"><strong>🏆 Рекорды:</strong>`;
+                    newHtml += `<div class="victors-list"><strong>🏆 Рекорды:</strong>`;
                     d.victors.forEach(v => {
                         let pts = calculatePoints(d.position, v.percent || 100, d.minPercent || 100, data.length);
-                        // ИСПРАВЛЕНО: Теперь тут генерируется ссылка с новым CSS классом video-btn
-                        html += `<div class="victor-item">
+                        newHtml += `<div class="victor-item">
                             <span>👤 <b>${v.name}</b> — ${v.percent || 100}% (<span style="color:#00ff66">+${pts} PTS</span>)</span>
                             <a href="${v.video}" target="_blank" class="video-btn">▶ Видео</a>
                         </div>`;
@@ -219,11 +218,15 @@
                         if (!playerScores[v.name]) playerScores[v.name] = 0;
                         playerScores[v.name] += pts;
                     });
-                    html += `</div>`;
+                    newHtml += `</div>`;
                 }
-                wrapper.innerHTML = html;
-                list.appendChild(wrapper);
+                newHtml += `</div>`;
             });
+
+            // Мягко обновляем HTML на странице только если он реально изменился
+            if (list.innerHTML !== newHtml) {
+                list.innerHTML = newHtml;
+            }
 
             renderLeaderboard(playerScores);
         }
@@ -254,11 +257,17 @@
                 </tr>`;
             });
             html += `</table>`;
-            board.innerHTML = html;
+            
+            if (board.innerHTML !== html) {
+                board.innerHTML = html;
+            }
         }
 
         function selectDemon(demon) {
+            // Запоминаем выбор, только если кликнули по новому ID
+            if (selectedId === demon.id) return;
             selectedId = demon.id;
+            
             document.getElementById('form-title').innerText = "Редактировать уровень";
             document.getElementById('form-position').value = demon.position;
             document.getElementById('form-name').value = demon.name;
