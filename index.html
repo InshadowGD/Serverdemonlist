@@ -3,34 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Server Demonlist</title>
-    <style>
-        body { background: radial-gradient(circle at top, #1a1c23 0%, #0f1015 100%); color: #f1f2f6; font-family: 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px; min-height: 100vh; }
-        .container { display: flex; gap: 35px; max-width: 1400px; margin: 0 auto; align-items: flex-start; }
-        .main-content { flex: 2; background: rgba(23, 24, 28, 0.6); padding: 30px; border-radius: 16px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
-        .sidebar { flex: 1; display: flex; flex-direction: column; gap: 25px; position: -webkit-sticky; position: sticky; top: 40px; overflow: visible; }
-        .panel { background: rgba(28, 29, 34, 0.8); padding: 25px; border-radius: 16px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2); }
-        h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: 1px; margin-top: 0; margin-bottom: 25px; background: linear-gradient(45deg, #ff4a4a, #ffb84d); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        h2 { font-size: 1.4rem; font-weight: 700; margin-top: 0; margin-bottom: 20px; color: #fff; border-bottom: 2px solid rgba(255,255,255,0.05); padding-bottom: 10px; }
-        .demon-card-wrapper { background: rgba(33, 35, 41, 0.5); margin: 15px 0; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 74, 74, 0.15); border-left: 6px solid #ff4a4a; cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
-        .demon-card-wrapper:hover { transform: translateY(-4px); background: rgba(40, 43, 51, 0.7); border-color: rgba(255, 74, 74, 0.4); }
-        .demon-card-wrapper.active { border-left-color: #00ff66; border-color: rgba(0, 255, 102, 0.3); background: linear-gradient(90deg, rgba(30, 41, 34, 0.6) 0%, rgba(24, 26, 31, 0.6) 100%); }
-        .demon-card-wrapper h3 { font-size: 1.3rem; margin: 0 0 8px 0; color: #fff; font-weight: 700; }
-        .demon-card-wrapper p { color: #9da2af; font-size: 0.95rem; margin: 0; }
-        .form-group { margin-bottom: 16px; }
-        .form-group label { display: block; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; color: #8a8d98; margin-bottom: 6px; }
-        input { width: 100%; padding: 12px; border-radius: 8px; background: #121316; border: 1px solid #2d3039; color: #fff; box-sizing: border-box; }
-        input:focus { border-color: #ff4a4a; outline: none; }
-        button { width: 100%; padding: 12px; font-weight: bold; font-size: 0.95rem; cursor: pointer; margin-top: 10px; border: none; border-radius: 8px; transition: all 0.2s; }
-        .victors-list { margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.08); }
-        .victors-list strong { color: #ffb84d; display: block; margin-bottom: 8px; font-size: 0.9rem; text-transform: uppercase; }
-        .victor-item { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px; margin: 6px 0; }
-        .video-btn { color: #4af3ff; text-decoration: none; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 12px; background: rgba(74, 243, 255, 0.05); border: 1px solid rgba(74, 243, 255, 0.2); border-radius: 6px; transition: all 0.2s ease-in-out; display: flex; align-items: center; gap: 6px; }
-        .video-btn:hover { color: #fff; background: rgba(74, 243, 255, 0.25); border-color: #4af3ff; box-shadow: 0 0 12px rgba(74, 243, 255, 0.4); transform: scale(1.03); }
-        .leaderboard-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .leaderboard-table th { text-align: left; padding: 8px; color: #8a8d98; font-size: 0.8rem; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .leaderboard-table td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 0.95rem; }
-        .rank-badge { inline-block; width: 22px; height: 24px; text-align: center; line-height: 22px; border-radius: 50%; font-weight: bold; font-size: 0.8rem; }
-    </style>
+    <!-- ПОДКЛЮЧАЕМ НАШ ОТДЕЛЬНЫЙ CSS ФАЙЛ -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -81,7 +55,7 @@
 
         window.onload = function() { 
             loadDemons(); 
-            setInterval(loadDemons, 3000); // Опрашиваем твой сервер Vercel Redis раз в 3 секунды
+            setInterval(loadDemons, 3000); 
         };
 
         function checkAdmin() {
@@ -107,7 +81,7 @@
         async function loadDemons() {
             const list = document.getElementById('demons-list');
             try {
-                const response = await fetch('/api/demons');
+                const response = await fetch('/api/demons?t=' + Date.now());
                 const data = await response.json();
                 
                 if (!data || data.length === 0) { 

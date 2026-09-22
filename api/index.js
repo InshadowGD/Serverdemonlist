@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { kv } = require('@vercel/kv'); // Подключаем официальный неубиваемый драйвер Redis
+const { kv } = require('@vercel/kv'); // Нативный драйвер Redis
 const app = express();
 
 app.use(cors());
@@ -10,7 +10,6 @@ const SECRET_ADMIN_CODE = '090909';
 
 async function readDB() {
     try {
-        // Читаем данные из нативного облака Redis
         const demons = await kv.get('demons');
         return Array.isArray(demons) ? demons : [];
     } catch (e) { 
@@ -20,7 +19,6 @@ async function readDB() {
 
 async function writeDB(data) {
     try { 
-        // Записываем данные в нативное облако Redis
         await kv.set('demons', data); 
     } catch (e) {}
 }
@@ -29,6 +27,7 @@ function isNotAdmin(req) {
     return req.headers['x-admin-code'] !== SECRET_ADMIN_CODE;
 }
 
+// ЖЕСТКОЕ ОТКЛЮЧЕНИЕ КЭША НА СЕРВЕРЕ
 app.get('/api/demons', async (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
