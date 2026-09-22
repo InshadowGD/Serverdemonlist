@@ -15,7 +15,6 @@
         .container { display: flex; gap: 35px; max-width: 1400px; margin: 0 auto; align-items: flex-start; }
         .main-content { flex: 2; background: rgba(23, 24, 28, 0.6); padding: 30px; border-radius: 16px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
         
-        /* ИСПРАВЛЕНО: Теперь сайдбар следует за экраном целиком без внутреннего скролла */
         .sidebar { 
             flex: 1; 
             display: flex; 
@@ -24,7 +23,6 @@
             position: -webkit-sticky;
             position: sticky;
             top: 40px; 
-            /* Убрали жесткие рамки и скрыли лишние полосы прокрутки */
             overflow: visible; 
         }
 
@@ -112,7 +110,7 @@
             </div>
 
             <div class="panel">
-                <h2>🏆 Таблица лидеров</h2>
+                <h2>🏆 Топ-5 лидеров</h2>
                 <div id="leaderboard-content">Подсчет очков...</div>
             </div>
         </div>
@@ -203,7 +201,12 @@
         }
         function renderLeaderboard(scores) {
             const board = document.getElementById('leaderboard-content');
-            let sortedPlayers = Object.keys(scores).map(name => ({ name: name, score: Math.round(scores[name] * 10) / 10 })).sort((a,b) => b.score - a.score);
+            
+            // МАГИЯ ТУТ: Добавлен .slice(0, 5) для строгого ограничения Топ-5 игроков
+            let sortedPlayers = Object.keys(scores)
+                .map(name => ({ name: name, score: Math.round(scores[name] * 10) / 10 }))
+                .sort((a,b) => b.score - a.score)
+                .slice(0, 5); 
             
             if (sortedPlayers.length === 0) {
                 board.innerHTML = 'Пока нет записанных рекордов.';
