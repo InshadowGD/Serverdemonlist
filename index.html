@@ -15,7 +15,7 @@
         .container { display: flex; gap: 35px; max-width: 1400px; margin: 0 auto; align-items: flex-start; }
         .main-content { flex: 2; background: rgba(23, 24, 28, 0.6); padding: 30px; border-radius: 16px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
         
-        /* МАГИЯ ТУТ: Делаем правую колонку плавающей при скролле */
+        /* ИСПРАВЛЕНО: Теперь сайдбар следует за экраном целиком без внутреннего скролла */
         .sidebar { 
             flex: 1; 
             display: flex; 
@@ -23,17 +23,10 @@
             gap: 25px; 
             position: -webkit-sticky;
             position: sticky;
-            top: 40px; /* Отступ от верхнего края экрана при прокрутке */
-            max-height: calc(100vh - 80px);
-            overflow-y: auto; /* Если контента в сайдбаре много, он будет аккуратно листаться сам внутри */
-            padding-right: 5px;
+            top: 40px; 
+            /* Убрали жесткие рамки и скрыли лишние полосы прокрутки */
+            overflow: visible; 
         }
-        
-        /* Стилизация полосы прокрутки внутри сайдбара, чтобы была красивой */
-        .sidebar::-webkit-scrollbar { width: 6px; }
-        .sidebar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 10px; }
-        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-        .sidebar::-webkit-scrollbar-thumb:hover { background: rgba(255, 74, 74, 0.3); }
 
         .panel { background: rgba(28, 29, 34, 0.8); padding: 25px; border-radius: 16px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2); }
         
@@ -79,7 +72,7 @@
         .leaderboard-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .leaderboard-table th { text-align: left; padding: 8px; color: #8a8d98; font-size: 0.8rem; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .leaderboard-table td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 0.95rem; }
-        .rank-badge { display: inline-block; width: 22px; height: 24px; text-align: center; line-height: 22px; border-radius: 50%; font-weight: bold; font-size: 0.8rem; }
+        .rank-badge { inline-block; width: 22px; height: 24px; text-align: center; line-height: 22px; border-radius: 50%; font-weight: bold; font-size: 0.8rem; }
     </style>
 </head>
 <body>
@@ -118,7 +111,6 @@
                 <button onclick="addVictor()" style="background: linear-gradient(135deg, #00ff66 0%, #00c850 100%); color:#000;">Записать рекорд</button>
             </div>
 
-            <!-- ТАБЛИЦА ЛИДЕРОВ ПЕРЕНЕСЕНА СЮДА, В ПРАВУЮ ПАНЕЛЬ -->
             <div class="panel">
                 <h2>🏆 Таблица лидеров</h2>
                 <div id="leaderboard-content">Подсчет очков...</div>
