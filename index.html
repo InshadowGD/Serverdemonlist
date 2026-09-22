@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>Server Demonlist</title>
     <style>
-        /* Настройки темы и геймерского дизайна */
         body { 
             background: radial-gradient(circle at top, #1a1c23 0%, #0f1015 100%); 
             color: #f1f2f6; 
@@ -71,7 +70,7 @@
     <div class="container">
         <div class="main-content">
             <h1>Server Demonlist</h1>
-            <div id="demons-list">Подключение к облаку Redis...</div>
+            <div id="demons-list">Синхронизация с базой Redis...</div>
         </div>
 
         <div class="sidebar">
@@ -113,6 +112,9 @@
         const SECRET_ADMIN_CODE = '090909';
         let selectedId = null;
 
+        // ЖЕСТКО ЗАДАЕМ АБСОЛЮТНЫЙ АДРЕС САЙТА ДЛЯ ИСКЛЮЧЕНИЯ ЛЮБЫХ СБОЕВ СЕТИ VERCEL
+        const SITE_URL = "https://vercel.app";
+
         window.onload = function() { 
             loadDemons(); 
             setInterval(loadDemons, 2000); 
@@ -138,11 +140,11 @@
             }
         }
 
-        // ИСПРАВЛЕНО: Запросы теперь идут по точным прямым путям, которые пробивают прокси Vercel
         async function loadDemons() {
             const list = document.getElementById('demons-list');
             try {
-                const response = await fetch('api/demons?t=' + Date.now());
+                // ИСПРАВЛЕНО: Теперь запрос летит по абсолютному прямому интернет-пути
+                const response = await fetch(`${SITE_URL}/api/demons?t=` + Date.now());
                 const data = await response.json();
                 
                 if (!data || data.length === 0) { 
@@ -266,8 +268,8 @@
 
             const body = { position: parseInt(position), name, creator, verifier, minPercent, id: selectedId };
             try {
-                // ИСПРАВЛЕНО: Убран лишний начальный слэш из относительного урла Vercel
-                const url = selectedId !== null ? `api/demons/update` : `api/demons/add`;
+                // ИСПРАВЛЕНО: Теперь отправка идет по абсолютному прямому интернет-пути
+                const url = selectedId !== null ? `${SITE_URL}/api/demons/update` : `${SITE_URL}/api/demons/add`;
                 const res = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
@@ -282,7 +284,7 @@
             if (selectedId === null || !confirm("Вы уверены?")) return;
             const adminCode = document.getElementById('form-admin-code').value;
             try {
-                const res = await fetch('api/demons/delete', { 
+                const res = await fetch(`${SITE_URL}/api/demons/delete`, { 
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
                     body: JSON.stringify({ id: selectedId })
@@ -300,7 +302,7 @@
             if (!nInput.value || !pInput.value || !vInput.value || selectedId === null) { alert("Заполните все поля рекорда!"); return; }
             
             try {
-                const res = await fetch('api/demons/add-victor', {
+                const res = await fetch(`${SITE_URL}/api/demons/add-victor`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode },
                     body: JSON.stringify({ id: selectedId, name: nInput.value, percent: parseInt(pInput.value), video: vInput.value })
