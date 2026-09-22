@@ -68,7 +68,6 @@
             }
             return true;
         }
-
         async function loadDemons() {
             const list = document.getElementById('demons-list');
             try {
@@ -104,6 +103,7 @@
                 list.innerHTML = 'Нет связи с сервером.';
             }
         }
+
         function selectDemon(demon) {
             selectedPos = parseInt(demon.position);
             document.getElementById('form-title').innerText = "Редактировать уровень";
