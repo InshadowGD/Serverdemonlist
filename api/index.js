@@ -28,7 +28,13 @@ function isNotAdmin(req) {
     return req.headers['x-admin-code'] !== SECRET_ADMIN_CODE;
 }
 
+// ГЛАВНЫЙ ЗАПРОС СПИСКА: Полностью блокируем CDN-кэширование хостинга
 app.get('/api/demons', async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+    
     const data = await readDB();
     res.json(data);
 });
