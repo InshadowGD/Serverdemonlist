@@ -58,7 +58,11 @@
         const SECRET_ADMIN_CODE = '090909'; 
         let selectedPos = null;
 
-        window.onload = function() { loadDemons(); };
+        // Включаем авто-обновление каждые 3000 миллисекунд (3 секунды)
+        window.onload = function() { 
+            loadDemons(); 
+            setInterval(loadDemons, 3000); 
+        };
 
         function checkAdmin() {
             const inputCode = document.getElementById('form-admin-code').value;
