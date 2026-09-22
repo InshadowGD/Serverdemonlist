@@ -7,7 +7,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const DB_PATH = path.join(__dirname, 'database.json');
+const DB_PATH = path.join('/tmp', 'database.json');
 
 function readDB() {
     try {
@@ -79,6 +79,8 @@ app.post('/api/demons/:position/victor', (req, res) => {
     }
     res.status(404).json({ success: false });
 });
+
+module.exports = app;
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
